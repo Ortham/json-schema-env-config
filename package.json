@@ -1,0 +1,98 @@
+{
+  "name": "json-schema-env-config",
+  "version": "1.0.0",
+  "description": "Define config in JSON schema, load it from environment variables.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint --ignore-path .gitignore --ext .ts ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ortham/json-schema-env-config.git"
+  },
+  "keywords": [
+    "json",
+    "schema",
+    "config",
+    "env"
+  ],
+  "author": "Oliver Hamlet",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Ortham/json-schema-env-config/issues"
+  },
+  "homepage": "https://github.com/Ortham/json-schema-env-config#readme",
+  "devDependencies": {
+    "@types/debug": "^4.1.5",
+    "@types/jest": "^26.0.19",
+    "@types/json-schema": "^7.0.6",
+    "@types/lodash": "^4.14.166",
+    "@types/node": "^12.19.11",
+    "@typescript-eslint/eslint-plugin": "^4.11.1",
+    "@typescript-eslint/parser": "^4.11.1",
+    "eslint": "^7.16.0",
+    "eslint-config-prettier": "^7.1.0",
+    "eslint-plugin-prettier": "^3.3.0",
+    "jest": "^26.6.3",
+    "prettier": "^2.2.1",
+    "ts-jest": "^26.4.4",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.1.3"
+  },
+  "dependencies": {
+    "debug": "^4.3.1",
+    "lodash": "^4.17.20"
+  },
+  "eslintConfig": {
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "project": "./tsconfig.json"
+    },
+    "env": {
+      "node": true,
+      "jest": true
+    },
+    "plugins": [
+      "@typescript-eslint",
+      "prettier"
+    ],
+    "settings": {
+      "import/resolver": {
+        "node": {
+          "extensions": [
+            ".ts"
+          ]
+        }
+      }
+    },
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/eslint-recommended",
+      "plugin:@typescript-eslint/recommended",
+      "prettier",
+      "prettier/@typescript-eslint"
+    ],
+    "rules": {
+      "curly": [
+        "error",
+        "all"
+      ],
+      "no-confusing-arrow": "error",
+      "no-param-reassign": "error",
+      "prettier/prettier": "error",
+      "no-restricted-syntax": "error",
+      "@typescript-eslint/explicit-function-return-type": "error"
+    }
+  },
+  "jest": {
+    "collectCoverage": true,
+    "preset": "ts-jest",
+    "testEnvironment": "node"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "none",
+    "endOfLine": "auto"
+  }
+}
