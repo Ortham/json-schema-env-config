@@ -34,9 +34,11 @@ value must be `true` or `false`. There are two exceptions to this:
   part: unlike the JSON Schema specification, an exponent will be accepted.
 
 If a property can have multiple types (e.g. `type` is set to an array of
-strings), then the environment variable value is parsed as each type in the
-order that they are listed: the first successfully parsed value is used to set
-the value of the property.
+strings, or a keyword like `anyOf` is used with different types), then the
+environment variable value is parsed as each type in the order that they are
+listed: the first successfully parsed value is used to set the value of the
+property. Note that because environment variable values are strings, they will
+always successfully parse as the `string` type.
 
 If a property's environment variable is not set or its value cannot be
 successfully parsed, the property is left unset. Properties are set in the order
@@ -78,12 +80,65 @@ Supported keywords:
 * `properties`
 * `items`
 * `additionalItems`
+* `anyOf`
 
 Unsupported keywords:
 
 * `additionalProperties`
 * `patternProperties`
 * `oneOf`
-* `anyOf`
 * `allOf`
 * `dependencies` (`dependentSchemas` in draft 2019-09)
+
+### Limitations
+
+As this library allows properties to be set individually and does not perform
+validation against the schema, it may produce invalid config if a property can
+have different types depending on its siblings.
+
+For example:
+
+```js
+const config: any = loadFromEnv(
+    {
+        ANY_OF_PROPERTY_KEY_1: '3.14',
+        ANY_OF_PROPERTY_KEY_2: 'true'
+    },
+    {
+        type: 'object',
+        properties: {
+            anyOfProperty: {
+                anyOf: [
+                    {
+                        type: 'object',
+                        additionalProperties: false,
+                        properties: {
+                            key1: {
+                                type: 'number'
+                            }
+                        }
+                    },
+                    {
+                        type: 'object',
+                        additionalProperties: false,
+                        properties: {
+                            key1: {
+                                type: 'string'
+                            },
+                            key2: {
+                                type: 'boolean'
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+);
+
+// This combination of variables would fail schema validation, as the
+// value for key1 conforms to the first schema, but the value for key2
+// conforms to the second, and the two are incompatible.
+expect(config.anyOfProperty.key1).toBe(3.14);
+expect(config.anyOfProperty.key2).toBe(true);
+```

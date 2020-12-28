@@ -249,6 +249,26 @@ function walkConfigProperties(
   configPropertyPath: ConfigPropertyPath,
   visitor: Visitor
 ): void {
+  if (schema.anyOf) {
+    for (const elementSchema of schema.anyOf) {
+      if (typeof elementSchema === 'boolean') {
+        throw new UnsupportedSchema(
+          'Boolean "anyOf" keyword element values are not supported'
+        );
+      }
+
+      // It doesn't matter that this doesn't stop on the first success, because
+      // an env var will only be used to set a config property once.
+      // However, if two or more of the anyOf elements have the 'object' type
+      // and properties with the same name(s) but different type(s), this can
+      // lead to invalid config being read, but that can't be avoided without
+      // performing validation against all possible combinations of values to
+      // discard any that are invalid before selecting one to use.
+      walkConfigFields(elementSchema, configPropertyPath, visitor);
+    }
+    return;
+  }
+
   visitor.visitSchema(schema, configPropertyPath);
 
   if (schema.properties) {
@@ -313,7 +333,6 @@ function readFromEnvVar(
     );
     return undefined;
   }
-  envVarNames.set(envVarName, configPropertyPath);
 
   if (envVarValue === undefined) {
     return undefined;
@@ -321,12 +340,15 @@ function readFromEnvVar(
 
   const value = parseEnvVarValue(envVarName, envVarValue, schema);
 
-  debug(
-    'Loaded value "%s" for env var "%s" using raw value "%s"',
-    value,
-    envVarName,
-    envVarValue
-  );
+  if (value !== undefined) {
+    envVarNames.set(envVarName, configPropertyPath);
+    debug(
+      'Loaded value "%s" for env var "%s" using raw value "%s"',
+      value,
+      envVarName,
+      envVarValue
+    );
+  }
 
   return value;
 }
@@ -352,7 +374,6 @@ function readFromFileEnvVar(
     );
     return undefined;
   }
-  envVarNames.set(envVarName, configPropertyPath);
 
   if (envVarValue === undefined) {
     return undefined;
@@ -363,7 +384,13 @@ function readFromFileEnvVar(
     return undefined;
   }
 
-  return parseEnvVarValue(envVarName, rawValue, schema);
+  const value = parseEnvVarValue(envVarName, rawValue, schema);
+
+  if (value !== undefined) {
+    envVarNames.set(envVarName, configPropertyPath);
+  }
+
+  return value;
 }
 
 function createParentObjects(
