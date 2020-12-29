@@ -27,6 +27,11 @@ type Visitor = {
     schema: JSONSchema,
     configPropertyPath: ConfigPropertyPath
   ) => void;
+  visitPatternProperty: (
+    pattern: string,
+    propertySchema: JSONSchema,
+    parentConfigPropertyPath: ConfigPropertyPath
+  ) => void;
   visitAdditionalProperties: (
     additionalPropertiesSchema: JSONSchema,
     parentConfigPropertyPath: ConfigPropertyPath
@@ -307,6 +312,20 @@ function walkConfigProperties(
     }
   }
 
+  if (schema.patternProperties) {
+    for (const pattern of Object.keys(schema.patternProperties)) {
+      const propertySchema = schema.patternProperties[pattern];
+
+      if (typeof propertySchema === 'boolean') {
+        throw new UnsupportedSchema(
+          'Boolean "patternProperties" keyword object properties are not supported'
+        );
+      }
+
+      visitor.visitPatternProperty(pattern, propertySchema, configPropertyPath);
+    }
+  }
+
   if (
     schema.additionalProperties !== true &&
     schema.additionalProperties !== false &&
@@ -449,6 +468,26 @@ function createParentObjects(
   return configObject;
 }
 
+function getCandidateEnvVarNameSuffixes(
+  env: NodeJS.ProcessEnv,
+  envVarNamePrefix: string
+): string[] {
+  return Object.keys(env).reduce((previous, current) => {
+    if (!current.startsWith(envVarNamePrefix)) {
+      debug(
+        'Skipping the env var "%s", does not start with "%s"',
+        current,
+        envVarNamePrefix
+      );
+      return previous;
+    }
+
+    const suffix = current.substring(envVarNamePrefix.length);
+
+    return previous.concat(suffix);
+  }, [] as string[]);
+}
+
 function discoverUnnamedProperties(
   propertiesSchema: JSONSchema,
   candidateEnvVarNameSuffixes: string[],
@@ -510,6 +549,45 @@ function discoverUnnamedProperties(
   }
 }
 
+// From MDN: <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#Escaping>
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
+function getPatternRegex(
+  pattern: string,
+  propertiesSchema: JSONSchema
+): RegExp {
+  // If the property schema is for an object, the env var suffix may include the
+  // name of one of its properties, so take that into account.
+  // This only matters if the regexp matches the end of the string.
+
+  if (
+    propertiesSchema.type !== 'object' ||
+    pattern.endsWith('\\$') ||
+    !pattern.endsWith('$')
+  ) {
+    return new RegExp(pattern, 'u');
+  }
+
+  const propertyEnvVarSubstrings = Object.keys(
+    propertiesSchema.properties ?? {}
+  ).map((property) => `_${escapeRegExp(snakeCase(property).toUpperCase())}`);
+
+  if (propertyEnvVarSubstrings.length === 0) {
+    return new RegExp(pattern, 'u');
+  }
+
+  propertyEnvVarSubstrings.push('$');
+  return new RegExp(
+    `${pattern.substring(
+      0,
+      pattern.length - 1
+    )}(${propertyEnvVarSubstrings.join('|')})`,
+    'u'
+  );
+}
+
 export function loadFromEnv(
   env: NodeJS.ProcessEnv,
   schema: JSONSchema
@@ -547,6 +625,45 @@ export function loadFromEnv(
         configPropertyPath[configPropertyPath.length - 1].value
       ] = value;
     },
+    visitPatternProperty(pattern, propertiesSchema, parentConfigPropertyPath) {
+      const patternRegex = getPatternRegex(pattern, propertiesSchema);
+      const envVarNamePrefix =
+        parentConfigPropertyPath.length > 0
+          ? `${getEnvVarName(parentConfigPropertyPath)}_`
+          : '';
+
+      const candidateEnvVarNameSuffixes = getCandidateEnvVarNameSuffixes(
+        env,
+        envVarNamePrefix
+      ).filter((envVarNameSuffix) => {
+        const result = patternRegex.test(envVarNameSuffix);
+        if (debug.enabled) {
+          const message = result
+            ? 'The env var "%s" suffix "%s" matches the regex "%s" for pattern "%s"'
+            : 'Skipping the env var "%s", its suffix "%s" does not match the regex "%s" for pattern "%s"';
+
+          debug(
+            message,
+            envVarNamePrefix + envVarNameSuffix,
+            envVarNameSuffix,
+            patternRegex,
+            pattern
+          );
+        }
+
+        return result;
+      });
+
+      const discoveredProperties = discoverUnnamedProperties(
+        propertiesSchema,
+        candidateEnvVarNameSuffixes,
+        parentConfigPropertyPath
+      );
+
+      for (const property of discoveredProperties) {
+        walkConfigProperties(property.schema, property.path, visitor);
+      }
+    },
     visitAdditionalProperties(
       additionalPropertiesSchema,
       parentConfigPropertyPath
@@ -559,22 +676,9 @@ export function loadFromEnv(
           ? `${getEnvVarName(parentConfigPropertyPath)}_`
           : '';
 
-      const candidateEnvVarNameSuffixes = Object.keys(env).reduce(
-        (previous, current) => {
-          if (!current.startsWith(envVarNamePrefix)) {
-            debug(
-              'Skipping the env var "%s", does not start with "%s"',
-              current,
-              envVarNamePrefix
-            );
-            return previous;
-          }
-
-          const suffix = current.substring(envVarNamePrefix.length);
-
-          return previous.concat(suffix);
-        },
-        [] as string[]
+      const candidateEnvVarNameSuffixes = getCandidateEnvVarNameSuffixes(
+        env,
+        envVarNamePrefix
       );
 
       const discoveredProperties = discoverUnnamedProperties(

@@ -389,6 +389,385 @@ describe('loadFromEnv', () => {
       });
     });
 
+    describe('patternProperties', () => {
+      it('should ignore additional properties if patternProperties is undefined', () => {
+        const config: any = loadFromEnv(
+          { property: 'test' },
+          { type: 'object' }
+        );
+
+        expect(config.property).toBeUndefined();
+      });
+
+      it('should only match regex patterns against env vars with the correct prefix for the parent property path', () => {
+        const config: any = loadFromEnv(
+          {
+            codeword: 'test',
+            'SUB_secret-code': 'other'
+          },
+          {
+            type: 'object',
+            properties: {
+              sub: {
+                type: 'object',
+                patternProperties: {
+                  code: {
+                    type: 'string'
+                  }
+                }
+              }
+            },
+            patternProperties: {
+              '(^code|code$)': {
+                type: 'string'
+              }
+            }
+          }
+        );
+
+        expect(config.codeword).toBe('test');
+        expect(config.sub['secret-code']).toBe('other');
+      });
+
+      it('should treat patterns as Unicode-aware and case-sensitive', () => {
+        const config: any = loadFromEnv(
+          { 'CODE👌': '3' },
+          {
+            type: 'object',
+            patternProperties: {
+              code: {
+                type: 'number'
+              },
+              'CODE.*\\p{Emoji_Presentation}': {
+                type: 'string'
+              }
+            }
+          }
+        );
+
+        expect(config['CODE👌']).toBe('3');
+      });
+
+      it('should be able to match a single pattern against multiple env vars', () => {
+        const config: any = loadFromEnv(
+          {
+            codeword: 'test',
+            'secret-code': 'other'
+          },
+          {
+            type: 'object',
+            patternProperties: {
+              code: {
+                type: 'string'
+              }
+            }
+          }
+        );
+
+        expect(config.codeword).toBe('test');
+        expect(config['secret-code']).toBe('other');
+      });
+
+      it("should be able to match multiple patterns for the same object's properties", () => {
+        const config: any = loadFromEnv(
+          {
+            passcode: 'test',
+            swordfish: 'other'
+          },
+          {
+            type: 'object',
+            patternProperties: {
+              code: {
+                type: 'string'
+              },
+              word: {
+                type: 'string'
+              }
+            }
+          }
+        );
+
+        expect(config.passcode).toBe('test');
+        expect(config.swordfish).toBe('other');
+      });
+
+      it("should set a property using the first matching pattern's schema that successfully parses the env var value", () => {
+        const config: any = loadFromEnv(
+          {
+            codeword: 'test',
+            passcode: '3'
+          },
+          {
+            type: 'object',
+            patternProperties: {
+              code: {
+                type: 'number'
+              },
+              word: {
+                type: 'string'
+              }
+            }
+          }
+        );
+
+        expect(config.codeword).toBe('test');
+        expect(config.passcode).toBe(3);
+      });
+
+      it('should ignore pattern schemas that have no type', () => {
+        const config: any = loadFromEnv(
+          { codeword: 'test' },
+          {
+            type: 'object',
+            patternProperties: {
+              code: {}
+            }
+          }
+        );
+
+        expect(config.codeword).toBeUndefined();
+      });
+
+      it('should support the null type', () => {
+        const config: any = loadFromEnv(
+          { codeword: 'null' },
+          {
+            type: 'object',
+            patternProperties: {
+              code: { type: 'null' }
+            }
+          }
+        );
+
+        expect(config.codeword).toBe(null);
+      });
+
+      it('should support the boolean type', () => {
+        const config: any = loadFromEnv(
+          { codeword: 'true' },
+          {
+            type: 'object',
+            patternProperties: {
+              code: { type: 'boolean' }
+            }
+          }
+        );
+
+        expect(config.codeword).toBe(true);
+      });
+
+      it('should support the number type', () => {
+        const config: any = loadFromEnv(
+          { codeword: '3.14' },
+          {
+            type: 'object',
+            patternProperties: {
+              code: { type: 'number' }
+            }
+          }
+        );
+
+        expect(config.codeword).toBe(3.14);
+      });
+
+      it('should support the integer type', () => {
+        const config: any = loadFromEnv(
+          { codeword: '3' },
+          {
+            type: 'object',
+            patternProperties: {
+              code: { type: 'integer' }
+            }
+          }
+        );
+
+        expect(config.codeword).toBe(3);
+      });
+
+      it('should support the string type', () => {
+        const config: any = loadFromEnv(
+          { codeword: 'test' },
+          {
+            type: 'object',
+            patternProperties: {
+              code: { type: 'string' }
+            }
+          }
+        );
+
+        expect(config.codeword).toBe('test');
+      });
+
+      it('should support the array type', () => {
+        const config: any = loadFromEnv(
+          { codeword: '1,2,3' },
+          {
+            type: 'object',
+            patternProperties: {
+              code: {
+                type: 'array',
+                items: {
+                  type: 'number'
+                }
+              }
+            }
+          }
+        );
+
+        expect(config.codeword).toEqual([1, 2, 3]);
+      });
+
+      it('should support the object type', () => {
+        const value = { a: 1, b: 2, c: 3 };
+        const config: any = loadFromEnv(
+          { codeword: JSON.stringify(value) },
+          {
+            type: 'object',
+            patternProperties: {
+              code: {
+                type: 'object'
+              }
+            }
+          }
+        );
+
+        expect(config.codeword).toEqual(value);
+      });
+
+      it('should be able to set a property in a descendant object value of a pattern key', () => {
+        const config: any = loadFromEnv(
+          {
+            object_SUB_A: '42'
+          },
+          {
+            type: 'object',
+            patternProperties: {
+              object: {
+                type: 'object',
+                properties: {
+                  sub: {
+                    type: 'object',
+                    properties: {
+                      a: {
+                        type: 'number'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        );
+
+        expect(config.object.sub.a).toBe(42);
+      });
+
+      it('should be able to set a should be able to set a property in a descendant object value of a pattern key that ends with a literal $', () => {
+        const config: any = loadFromEnv(
+          {
+            object$_SUB_A: '42',
+            object_SUB_A: '24'
+          },
+          {
+            type: 'object',
+            patternProperties: {
+              'object\\$': {
+                type: 'object',
+                properties: {
+                  sub: {
+                    type: 'object',
+                    properties: {
+                      a: {
+                        type: 'number'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        );
+
+        expect(config).toEqual({
+          object$: {
+            sub: {
+              a: 42
+            }
+          }
+        });
+      });
+
+      it('should be able to set a should be able to set a property in a descendant object value of a pattern key that ends with a $', () => {
+        const config: any = loadFromEnv(
+          {
+            object$_SUB_A: '42',
+            object_SUB_A: '24'
+          },
+          {
+            type: 'object',
+            patternProperties: {
+              object$: {
+                type: 'object',
+                properties: {
+                  sub: {
+                    type: 'object',
+                    properties: {
+                      a: {
+                        type: 'number'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        );
+
+        expect(config).toEqual({
+          object: {
+            sub: {
+              a: 24
+            }
+          }
+        });
+      });
+
+      it('should not override named property values', () => {
+        const config: any = loadFromEnv(
+          {
+            NAMED_OBJECT_A: '3.14',
+            OBJECT_A: 'test'
+          },
+          {
+            type: 'object',
+            properties: {
+              namedObject: {
+                type: 'object',
+                properties: {
+                  a: {
+                    type: 'number'
+                  }
+                }
+              }
+            },
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                a: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        );
+
+        expect(config.namedObject).toEqual({
+          a: 3.14
+        });
+        expect(config.OBJECT.a).toBe('test');
+      });
+    });
+
     describe('additionalProperties', () => {
       it('should ignore additional properties if additionalProperties is undefined', () => {
         const config: any = loadFromEnv(
@@ -691,6 +1070,41 @@ describe('loadFromEnv', () => {
         );
 
         expect(config.NAMED_OBJECT.a).toBe('three');
+        expect(config.OBJECT.a).toBe('test');
+      });
+
+      it('should not overlap with pattern properties', () => {
+        const config: any = loadFromEnv(
+          {
+            PATTERN_OBJECT_A: '3.14',
+            OBJECT_A: 'test'
+          },
+          {
+            type: 'object',
+            patternProperties: {
+              PAT: {
+                type: 'object',
+                properties: {
+                  a: {
+                    type: 'number'
+                  }
+                }
+              }
+            },
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                a: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        );
+
+        expect(config.PATTERN_OBJECT).toEqual({
+          a: 3.14
+        });
         expect(config.OBJECT.a).toBe('test');
       });
     });
