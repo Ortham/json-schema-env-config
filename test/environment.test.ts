@@ -391,112 +391,118 @@ describe('loadFromEnv', () => {
   });
 
   describe('In-place applicators', () => {
-    describe('anyOf', () => {
-      it('should try to parse property using the schemas in the order they are given, stopping on success', () => {
-        const config: any = loadFromEnv(
-          {
-            ANY_OF_PROPERTY: '3.14'
-          },
-          {
-            type: 'object',
-            properties: {
-              anyOfProperty: {
-                anyOf: [
-                  { type: 'integer' },
-                  { type: 'number' },
-                  { type: 'string' }
-                ]
+    const keywords = ['anyOf', 'oneOf'];
+
+    for (const keyword of keywords) {
+      describe(keyword, () => {
+        it('should try to parse property using the schemas in the order they are given, stopping on success', () => {
+          const config: any = loadFromEnv(
+            {
+              PROPERTY: '3.14'
+            },
+            {
+              type: 'object',
+              properties: {
+                property: {
+                  [keyword]: [
+                    { type: 'integer' },
+                    { type: 'number' },
+                    { type: 'string' }
+                  ]
+                }
               }
             }
-          }
-        );
+          );
 
-        expect(config.anyOfProperty).toBe(3.14);
-      });
+          expect(config.property).toBe(3.14);
+        });
 
-      it('should recurse into object properties inside an anyOf schema', () => {
-        const config: any = loadFromEnv(
-          {
-            ANY_OF_PROPERTY_KEY: '3.14'
-          },
-          {
-            type: 'object',
-            properties: {
-              anyOfProperty: {
-                anyOf: [
-                  {
-                    type: 'object',
-                    properties: {
-                      key: {
-                        type: 'integer'
+        it(`should recurse into object properties inside an ${keyword} schema`, () => {
+          const config: any = loadFromEnv(
+            {
+              PROPERTY_KEY: '3.14'
+            },
+            {
+              type: 'object',
+              properties: {
+                property: {
+                  [keyword]: [
+                    {
+                      type: 'object',
+                      properties: {
+                        key: {
+                          type: 'integer'
+                        }
+                      }
+                    },
+                    {
+                      type: 'object',
+                      properties: {
+                        key: {
+                          type: 'number'
+                        }
                       }
                     }
-                  },
-                  {
-                    type: 'object',
-                    properties: {
-                      key: {
-                        type: 'number'
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
             }
-          }
-        );
+          );
 
-        expect(config.anyOfProperty.key).toBe(3.14);
+          expect(config.property.key).toBe(3.14);
+        });
       });
 
-      // This is a limitation of resolving properties individually - the
-      // library would have to read all the properties's env vars and then try
-      // validating possible combinations of types to discard any that are
-      // invalid before picking one to use.
-      it('sets properties of objects inside an anyOf schema independently', () => {
-        const config: any = loadFromEnv(
-          {
-            ANY_OF_PROPERTY_KEY_1: '3.14',
-            ANY_OF_PROPERTY_KEY_2: 'true'
-          },
-          {
-            type: 'object',
-            properties: {
-              anyOfProperty: {
-                anyOf: [
-                  {
-                    type: 'object',
-                    additionalProperties: false,
-                    properties: {
-                      key1: {
-                        type: 'number'
+      describe(keyword, () => {
+        // This is a limitation of resolving properties individually - the
+        // library would have to read all the properties's env vars and then try
+        // validating possible combinations of types to discard any that are
+        // invalid before picking one to use.
+        it(`sets properties of objects inside an ${keyword} schema independently`, () => {
+          const config: any = loadFromEnv(
+            {
+              PROPERTY_KEY_1: '3.14',
+              PROPERTY_KEY_2: 'true'
+            },
+            {
+              type: 'object',
+              properties: {
+                property: {
+                  [keyword]: [
+                    {
+                      type: 'object',
+                      additionalProperties: false,
+                      properties: {
+                        key1: {
+                          type: 'number'
+                        }
+                      }
+                    },
+                    {
+                      type: 'object',
+                      additionalProperties: false,
+                      properties: {
+                        key1: {
+                          type: 'string'
+                        },
+                        key2: {
+                          type: 'boolean'
+                        }
                       }
                     }
-                  },
-                  {
-                    type: 'object',
-                    additionalProperties: false,
-                    properties: {
-                      key1: {
-                        type: 'string'
-                      },
-                      key2: {
-                        type: 'boolean'
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
             }
-          }
-        );
+          );
 
-        // This combination of variables would fail schema validation, as the
-        // value for key1 conforms to the first schema, but the value for key2
-        // conforms to the second, and the two are incompatible.
-        expect(config.anyOfProperty.key1).toBe(3.14);
-        expect(config.anyOfProperty.key2).toBe(true);
+          // This combination of variables would fail schema validation, as the
+          // value for key1 conforms to the first schema, but the value for key2
+          // conforms to the second, and the two are incompatible.
+          expect(config.property.key1).toBe(3.14);
+          expect(config.property.key2).toBe(true);
+        });
       });
-    });
+    }
   });
 });

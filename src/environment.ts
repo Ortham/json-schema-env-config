@@ -5,6 +5,8 @@ import debugConstructor from 'debug';
 
 const debug = debugConstructor('json-schema-env-config');
 
+const IN_PLACE_APPLICATOR_KEYWORDS: ['anyOf', 'oneOf'] = ['anyOf', 'oneOf'];
+
 type JSONType =
   | string
   | number
@@ -249,24 +251,27 @@ function walkConfigProperties(
   configPropertyPath: ConfigPropertyPath,
   visitor: Visitor
 ): void {
-  if (schema.anyOf) {
-    for (const elementSchema of schema.anyOf) {
-      if (typeof elementSchema === 'boolean') {
-        throw new UnsupportedSchema(
-          'Boolean "anyOf" keyword element values are not supported'
-        );
-      }
+  for (const keyword of IN_PLACE_APPLICATOR_KEYWORDS) {
+    const schemas = schema[keyword];
+    if (schemas) {
+      for (const elementSchema of schemas) {
+        if (typeof elementSchema === 'boolean') {
+          throw new UnsupportedSchema(
+            `Boolean "${keyword}" keyword element values are not supported`
+          );
+        }
 
-      // It doesn't matter that this doesn't stop on the first success, because
-      // an env var will only be used to set a config property once.
-      // However, if two or more of the anyOf elements have the 'object' type
-      // and properties with the same name(s) but different type(s), this can
-      // lead to invalid config being read, but that can't be avoided without
-      // performing validation against all possible combinations of values to
-      // discard any that are invalid before selecting one to use.
-      walkConfigFields(elementSchema, configPropertyPath, visitor);
+        // It doesn't matter that this doesn't stop on the first success, because
+        // an env var will only be used to set a config property once.
+        // However, if two or more of the elements have the 'object' type
+        // and properties with the same name(s) but different type(s), this can
+        // lead to invalid config being read, but that can't be avoided without
+        // performing validation against all possible combinations of values to
+        // discard any that are invalid before selecting one to use.
+        walkConfigProperties(elementSchema, configPropertyPath, visitor);
+      }
+      return;
     }
-    return;
   }
 
   visitor.visitSchema(schema, configPropertyPath);
