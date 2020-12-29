@@ -82,12 +82,12 @@ Supported keywords:
 * `additionalItems`
 * `anyOf`
 * `oneOf`
+* `allOf`
 
 Unsupported keywords:
 
 * `additionalProperties`
 * `patternProperties`
-* `allOf`
 * `dependencies` (`dependentSchemas` in draft 2019-09)
 
 ### Limitations

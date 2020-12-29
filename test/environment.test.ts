@@ -391,7 +391,7 @@ describe('loadFromEnv', () => {
   });
 
   describe('In-place applicators', () => {
-    const keywords = ['anyOf', 'oneOf'];
+    const keywords = ['anyOf', 'oneOf', 'allOf'];
 
     for (const keyword of keywords) {
       describe(keyword, () => {
@@ -452,7 +452,13 @@ describe('loadFromEnv', () => {
           expect(config.property.key).toBe(3.14);
         });
       });
+    }
 
+    // allOf isn't problematic because the types in all elements need to be
+    // consistent for validation to be successful.
+    const problematicKeywords = ['anyOf', 'oneOf'];
+
+    for (const keyword of problematicKeywords) {
       describe(keyword, () => {
         // This is a limitation of resolving properties individually - the
         // library would have to read all the properties's env vars and then try

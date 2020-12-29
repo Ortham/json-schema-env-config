@@ -5,7 +5,11 @@ import debugConstructor from 'debug';
 
 const debug = debugConstructor('json-schema-env-config');
 
-const IN_PLACE_APPLICATOR_KEYWORDS: ['anyOf', 'oneOf'] = ['anyOf', 'oneOf'];
+const IN_PLACE_APPLICATOR_KEYWORDS: ['anyOf', 'oneOf', 'allOf'] = [
+  'anyOf',
+  'oneOf',
+  'allOf'
+];
 
 type JSONType =
   | string
