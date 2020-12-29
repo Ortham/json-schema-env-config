@@ -27,10 +27,19 @@ type Visitor = {
     schema: JSONSchema,
     configPropertyPath: ConfigPropertyPath
   ) => void;
+  visitAdditionalProperties: (
+    additionalPropertiesSchema: JSONSchema,
+    parentConfigPropertyPath: ConfigPropertyPath
+  ) => void;
 };
 
 type ConfigPropertyPathItem = { value: string; named: boolean };
 type ConfigPropertyPath = ConfigPropertyPathItem[];
+
+type DiscoveredProperty = {
+  path: ConfigPropertyPath;
+  schema: JSONSchema;
+};
 
 export class UnsupportedSchema extends Error {
   constructor(message: string) {
@@ -297,6 +306,17 @@ function walkConfigProperties(
       );
     }
   }
+
+  if (
+    schema.additionalProperties !== true &&
+    schema.additionalProperties !== false &&
+    schema.additionalProperties !== undefined
+  ) {
+    visitor.visitAdditionalProperties(
+      schema.additionalProperties,
+      configPropertyPath
+    );
+  }
 }
 
 function readFromFileVariant(
@@ -429,6 +449,67 @@ function createParentObjects(
   return configObject;
 }
 
+function discoverUnnamedProperties(
+  propertiesSchema: JSONSchema,
+  candidateEnvVarNameSuffixes: string[],
+  parentPath: ConfigPropertyPath
+): DiscoveredProperty[] {
+  switch (propertiesSchema.type) {
+    case undefined:
+      // No type, ignore any candidates.
+      return [];
+    case 'null':
+    case 'boolean':
+    case 'string':
+    case 'integer':
+    case 'number':
+    case 'array': {
+      // Each candidate is a field.
+      return candidateEnvVarNameSuffixes.map((suffix) => ({
+        path: parentPath.concat({ value: suffix, named: false }),
+        schema: propertiesSchema
+      }));
+    }
+    case 'object': {
+      // Candidates may be for properties or they may be for properties of the properties.
+      // We can only tell by comparing their suffixes against sub-field names.
+      const propertyNameSuffixes = Object.keys(
+        propertiesSchema.properties ?? {}
+      ).map((name) => `_${snakeCase(name).toUpperCase()}`);
+
+      return candidateEnvVarNameSuffixes.map((envVarSuffix) => {
+        const matchedSuffix = propertyNameSuffixes.find(
+          (propertySuffix) =>
+            envVarSuffix.includes(propertySuffix) &&
+            envVarSuffix.length > propertySuffix.length
+        );
+
+        const additionalPropertyName = matchedSuffix
+          ? envVarSuffix.substring(0, envVarSuffix.indexOf(matchedSuffix))
+          : envVarSuffix;
+
+        debug(
+          'Extracted additional property name "%s" from env var suffix "%s"',
+          envVarSuffix,
+          matchedSuffix
+        );
+
+        return {
+          schema: propertiesSchema,
+          path: parentPath.concat({
+            value: additionalPropertyName,
+            named: false
+          })
+        };
+      });
+    }
+    default:
+      throw new UnsupportedSchema(
+        `Cannot handle JSON schema type ${propertiesSchema.type}`
+      );
+  }
+}
+
 export function loadFromEnv(
   env: NodeJS.ProcessEnv,
   schema: JSONSchema
@@ -465,6 +546,46 @@ export function loadFromEnv(
       configObject[
         configPropertyPath[configPropertyPath.length - 1].value
       ] = value;
+    },
+    visitAdditionalProperties(
+      additionalPropertiesSchema,
+      parentConfigPropertyPath
+    ) {
+      // Additional properties have a schema, but we don't know what they're
+      // named. Their env var names will start with the env var name for this
+      // field, so filter out any that don't.
+      const envVarNamePrefix =
+        parentConfigPropertyPath.length > 0
+          ? `${getEnvVarName(parentConfigPropertyPath)}_`
+          : '';
+
+      const candidateEnvVarNameSuffixes = Object.keys(env).reduce(
+        (previous, current) => {
+          if (!current.startsWith(envVarNamePrefix)) {
+            debug(
+              'Skipping the env var "%s", does not start with "%s"',
+              current,
+              envVarNamePrefix
+            );
+            return previous;
+          }
+
+          const suffix = current.substring(envVarNamePrefix.length);
+
+          return previous.concat(suffix);
+        },
+        [] as string[]
+      );
+
+      const discoveredProperties = discoverUnnamedProperties(
+        additionalPropertiesSchema,
+        candidateEnvVarNameSuffixes,
+        parentConfigPropertyPath
+      );
+
+      for (const property of discoveredProperties) {
+        walkConfigProperties(property.schema, property.path, visitor);
+      }
     }
   };
 

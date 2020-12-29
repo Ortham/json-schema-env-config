@@ -78,6 +78,7 @@ Supported keywords:
 
 * `type`
 * `properties`
+* `additionalProperties`
 * `items`
 * `additionalItems`
 * `anyOf`
@@ -86,7 +87,6 @@ Supported keywords:
 
 Unsupported keywords:
 
-* `additionalProperties`
 * `patternProperties`
 * `dependencies` (`dependentSchemas` in draft 2019-09)
 

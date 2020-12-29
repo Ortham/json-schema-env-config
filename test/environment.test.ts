@@ -388,6 +388,312 @@ describe('loadFromEnv', () => {
         expect(config.namedBooleanProperty).toBe(true);
       });
     });
+
+    describe('additionalProperties', () => {
+      it('should ignore additional properties if additionalProperties is undefined', () => {
+        const config: any = loadFromEnv(
+          { property: 'test' },
+          { type: 'object' }
+        );
+
+        expect(config.property).toBeUndefined();
+      });
+
+      it('should ignore additional properties if additionalProperties is false', () => {
+        const config: any = loadFromEnv(
+          { property: 'test' },
+          {
+            type: 'object',
+            additionalProperties: false
+          }
+        );
+
+        expect(config.property).toBeUndefined();
+      });
+
+      it('should ignore additional properties if additionalProperties is true', () => {
+        const config: any = loadFromEnv(
+          { property: 'test' },
+          {
+            type: 'object',
+            additionalProperties: false
+          }
+        );
+
+        expect(config.property).toBeUndefined();
+      });
+
+      it('should ignore additional properties schema with no type', () => {
+        const config: any = loadFromEnv(
+          { property: 'test' },
+          {
+            type: 'object',
+            additionalProperties: {}
+          }
+        );
+
+        expect(config.property).toBeUndefined();
+      });
+
+      it('should create parent object when setting an additional property', () => {
+        const config: any = loadFromEnv(
+          { property: 'test' },
+          {
+            type: 'object',
+            additionalProperties: { type: 'string' }
+          }
+        );
+
+        expect(config.property).toBe('test');
+      });
+
+      it('should not transform property name in env var', () => {
+        const config: any = loadFromEnv(
+          { mixedCase_STR: 'test' },
+          {
+            type: 'object',
+            additionalProperties: { type: 'string' }
+          }
+        );
+
+        expect(config.mixedCase_STR).toBe('test');
+      });
+
+      it('should be able to set an additional property null', () => {
+        const config: any = loadFromEnv(
+          { property: 'null' },
+          {
+            type: 'object',
+            additionalProperties: { type: 'null' }
+          }
+        );
+
+        expect(config.property).toBe(null);
+      });
+
+      it('should be able to set an additional property boolean', () => {
+        const config: any = loadFromEnv(
+          { property: 'true' },
+          {
+            type: 'object',
+            additionalProperties: { type: 'boolean' }
+          }
+        );
+
+        expect(config.property).toBe(true);
+      });
+
+      it('should be able to set an additional property string', () => {
+        const config: any = loadFromEnv(
+          { property: 'test' },
+          {
+            type: 'object',
+            additionalProperties: { type: 'string' }
+          }
+        );
+
+        expect(config.property).toBe('test');
+      });
+
+      it('should be able to set an additional property integer', () => {
+        const config: any = loadFromEnv(
+          { property: '3' },
+          {
+            type: 'object',
+            additionalProperties: { type: 'integer' }
+          }
+        );
+
+        expect(config.property).toBe(3);
+      });
+
+      it('should be able to set an additional property number', () => {
+        const config: any = loadFromEnv(
+          { property: '3.14' },
+          {
+            type: 'object',
+            additionalProperties: { type: 'number' }
+          }
+        );
+
+        expect(config.property).toBe(3.14);
+      });
+
+      it('should be able to set an additional property array', () => {
+        const value = [1, 2, 3];
+        const config: any = loadFromEnv(
+          { property: JSON.stringify(value) },
+          {
+            type: 'object',
+            additionalProperties: {
+              type: 'array',
+              items: { type: 'number' }
+            }
+          }
+        );
+
+        expect(config.property).toEqual(value);
+      });
+
+      it('should be able to set an object', () => {
+        const value = { name: 'John' };
+        const config: any = loadFromEnv(
+          { property: JSON.stringify(value) },
+          {
+            type: 'object',
+            additionalProperties: { type: 'object' }
+          }
+        );
+
+        expect(config.property).toEqual(value);
+      });
+
+      it('should be able to set multiple named object properties independently', () => {
+        const config: any = loadFromEnv(
+          {
+            property_NAME: 'John',
+            property_NUMBER: '42'
+          },
+          {
+            type: 'object',
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                name: {
+                  type: 'string'
+                },
+                number: {
+                  type: 'number'
+                }
+              }
+            }
+          }
+        );
+
+        expect(config.property.name).toBe('John');
+        expect(config.property.number).toBe(42);
+      });
+
+      it('should recurse into object additional properties', () => {
+        const config: any = loadFromEnv(
+          {
+            property_OBJ_a: '1',
+            property_OBJ_b: '2'
+          },
+          {
+            type: 'object',
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                obj: {
+                  type: 'object',
+                  additionalProperties: {
+                    type: 'number'
+                  }
+                }
+              }
+            }
+          }
+        );
+
+        expect(config.property.obj.a).toBe(1);
+        expect(config.property.obj.b).toBe(2);
+      });
+
+      it('should recurse into object properties', () => {
+        const config: any = loadFromEnv(
+          {
+            object_SUB_A: '42'
+          },
+          {
+            type: 'object',
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                sub: {
+                  type: 'object',
+                  properties: {
+                    a: {
+                      type: 'number'
+                    }
+                  }
+                }
+              }
+            }
+          }
+        );
+
+        expect(config.object.sub.a).toBe(42);
+      });
+
+      it('should not overlap with named properties', () => {
+        const config: any = loadFromEnv(
+          {
+            NAMED_OBJECT_A: '3.14',
+            OBJECT_A: 'test'
+          },
+          {
+            type: 'object',
+            properties: {
+              namedObject: {
+                type: 'object',
+                properties: {
+                  a: {
+                    type: 'number'
+                  }
+                }
+              }
+            },
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                a: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        );
+
+        expect(config.namedObject).toEqual({
+          a: 3.14
+        });
+        expect(config.OBJECT.a).toBe('test');
+      });
+
+      it('should overlap with a named property if the named object env var value is ignored', () => {
+        const config: any = loadFromEnv(
+          {
+            NAMED_OBJECT_A: 'three',
+            OBJECT_A: 'test'
+          },
+          {
+            type: 'object',
+            properties: {
+              NAMED_OBJECT: {
+                type: 'object',
+                properties: {
+                  a: {
+                    type: 'number'
+                  }
+                }
+              }
+            },
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                a: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        );
+
+        expect(config.NAMED_OBJECT.a).toBe('three');
+        expect(config.OBJECT.a).toBe('test');
+      });
+    });
   });
 
   describe('In-place applicators', () => {
