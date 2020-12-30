@@ -6,9 +6,9 @@ using JSON schema, and to then load configuration from environment variables
 using that schema, without having to explicitly name the parameter's environment
 variables.
 
-No particular version of JSON schema is targeted, and full compatibility is not
-attempted: only a useful subset of syntax is supported. See below for
-details.
+This library is built using the TypeScript types for JSON Schema drafts 4 and 6
+that are provided by the `@types/json-schema` package. Drafts 5, 7 and 2019-09
+are probably also compatible. See the section below for details.
 
 This library does not validate that the resulting config actually conforms to
 the JSON schema: it's only interested in the data types.
@@ -33,7 +33,7 @@ value must be `true` or `false`. There are two exceptions to this:
 
 * arrays may be given as JSON or CSV. JSON is tried first.
 * the `integer` JSON Schema `type` value must be a number with no fractional
-  part: unlike the JSON Schema specification, an exponent will be accepted.
+  part: unlike earlier JSON Schema specifications, an exponent will be accepted.
 
 If a property can have multiple types (e.g. `type` is set to an array of
 strings, or a keyword like `anyOf` is used with different types), then the
@@ -70,13 +70,11 @@ value, but it will be ignored if `CAMEL_CASE_VARIABLE_1` is also set.
 
 The input JSON schema must contain no schema references. If a schema contains
 references, they can be resolved before the schema is passed to this library:
-several libraries exist for doing this.
+there are several existing libraries that can resolve JSON references.
 
 As this library is only concerned with config data structures and not with
-validation, most JSON schema keywords are irrelevant and ignored. Only relevant
-keywords are listed below.
-
-Supported keywords:
+validation, most JSON schema keywords are irrelevant and ignored. Only the
+following keywords are used:
 
 * `type`
 * `properties`
@@ -88,9 +86,18 @@ Supported keywords:
 * `oneOf`
 * `allOf`
 
-Unsupported keywords:
+Other keywords that may be relevant to defining the structure of a JSON document
+but which are currently ignored by this library are:
 
-* `dependencies` (`dependentSchemas` in draft 2019-09)
+* `if`
+* `then`
+* `else`
+* `dependencies` / `dependentSchemas`
+* `unevaluatedItems`
+* `unevaluatedProperties`
+
+As the JSON Schema specification evolves, it may also add additional relevant
+keywords.
 
 ### Limitations
 
