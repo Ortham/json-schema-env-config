@@ -1,0 +1,7 @@
+coverage/
+dist/test/
+src/
+test/
+index.ts
+tsconfig.json
+*.tgz

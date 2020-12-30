@@ -2,10 +2,12 @@
   "name": "json-schema-env-config",
   "version": "1.0.0",
   "description": "Define config in JSON schema, load it from environment variables.",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
-    "lint": "eslint --ignore-path .gitignore --ext .ts ."
+    "lint": "eslint --ignore-path .gitignore --ext .ts .",
+    "prepublishOnly": "tsc"
   },
   "repository": {
     "type": "git",
@@ -88,7 +90,8 @@
   "jest": {
     "collectCoverage": true,
     "preset": "ts-jest",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "roots": ["src", "test"]
   },
   "prettier": {
     "singleQuote": true,
