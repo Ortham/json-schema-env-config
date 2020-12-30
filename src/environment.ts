@@ -46,21 +46,47 @@ type DiscoveredProperty = {
   schema: JSONSchema;
 };
 
+type EnvVarNamingOptions = {
+  case?: 'snake_case' | 'SCREAMING_SNAKE_CASE';
+  propertySeparator?: string;
+  prefix?: string;
+};
+
 export class UnsupportedSchema extends Error {
   constructor(message: string) {
     super(message);
   }
 }
 
-function getEnvVarName(configPropertyPath: ConfigPropertyPath): string {
-  return configPropertyPath
+function transformPropertyName(
+  name: string,
+  options: EnvVarNamingOptions
+): string {
+  if (options.case === 'snake_case') {
+    return snakeCase(name);
+  }
+
+  return snakeCase(name).toUpperCase();
+}
+
+function getEnvVarName(
+  configPropertyPath: ConfigPropertyPath,
+  options: EnvVarNamingOptions
+): string {
+  const name = configPropertyPath
     .map((pathItem) => {
       if (pathItem.named) {
-        return snakeCase(pathItem.value).toUpperCase();
+        return transformPropertyName(pathItem.value, options);
       }
       return pathItem.value;
     })
-    .join('_');
+    .join(options.propertySeparator);
+
+  if (options.prefix) {
+    return options.prefix + options.propertySeparator + name;
+  }
+
+  return name;
 }
 
 function parseNull(envVarName: string, envVarValue: string): null | undefined {
@@ -366,9 +392,10 @@ function readFromEnvVar(
   schema: JSONSchema,
   configPropertyPath: ConfigPropertyPath,
   env: NodeJS.ProcessEnv,
-  envVarNames: Map<string, ConfigPropertyPath>
+  envVarNames: Map<string, ConfigPropertyPath>,
+  options: EnvVarNamingOptions
 ): JSONType | undefined {
-  const envVarName = getEnvVarName(configPropertyPath);
+  const envVarName = getEnvVarName(configPropertyPath, options);
   const envVarValue = env[envVarName];
 
   const previousPath = envVarNames.get(envVarName);
@@ -405,10 +432,12 @@ function readFromFileEnvVar(
   schema: JSONSchema,
   configPropertyPath: ConfigPropertyPath,
   env: NodeJS.ProcessEnv,
-  envVarNames: Map<string, ConfigPropertyPath>
+  envVarNames: Map<string, ConfigPropertyPath>,
+  options: EnvVarNamingOptions
 ): JSONType | undefined {
   const envVarName = getEnvVarName(
-    configPropertyPath.concat({ value: 'FILE', named: false })
+    configPropertyPath.concat({ value: 'FILE', named: false }),
+    options
   );
   const envVarValue = env[envVarName];
 
@@ -491,7 +520,8 @@ function getCandidateEnvVarNameSuffixes(
 function discoverUnnamedProperties(
   propertiesSchema: JSONSchema,
   candidateEnvVarNameSuffixes: string[],
-  parentPath: ConfigPropertyPath
+  parentPath: ConfigPropertyPath,
+  options: EnvVarNamingOptions
 ): DiscoveredProperty[] {
   switch (propertiesSchema.type) {
     case undefined:
@@ -514,7 +544,10 @@ function discoverUnnamedProperties(
       // We can only tell by comparing their suffixes against sub-field names.
       const propertyNameSuffixes = Object.keys(
         propertiesSchema.properties ?? {}
-      ).map((name) => `_${snakeCase(name).toUpperCase()}`);
+      ).map(
+        (name) =>
+          options.propertySeparator + transformPropertyName(name, options)
+      );
 
       return candidateEnvVarNameSuffixes.map((envVarSuffix) => {
         const matchedSuffix = propertyNameSuffixes.find(
@@ -556,7 +589,8 @@ function escapeRegExp(string: string): string {
 
 function getPatternRegex(
   pattern: string,
-  propertiesSchema: JSONSchema
+  propertiesSchema: JSONSchema,
+  options: EnvVarNamingOptions
 ): RegExp {
   // If the property schema is for an object, the env var suffix may include the
   // name of one of its properties, so take that into account.
@@ -572,7 +606,11 @@ function getPatternRegex(
 
   const propertyEnvVarSubstrings = Object.keys(
     propertiesSchema.properties ?? {}
-  ).map((property) => `_${escapeRegExp(snakeCase(property).toUpperCase())}`);
+  ).map((property) =>
+    escapeRegExp(
+      options.propertySeparator + transformPropertyName(property, options)
+    )
+  );
 
   if (propertyEnvVarSubstrings.length === 0) {
     return new RegExp(pattern, 'u');
@@ -588,10 +626,35 @@ function getPatternRegex(
   );
 }
 
+function getEnvVarNamePrefix(
+  parentConfigPropertyPath: ConfigPropertyPath,
+  options: EnvVarNamingOptions
+): string {
+  const parentPropertyEnvVarName = getEnvVarName(
+    parentConfigPropertyPath,
+    options
+  );
+  return parentConfigPropertyPath.length > 0
+    ? parentPropertyEnvVarName + options.propertySeparator
+    : '';
+}
+
 export function loadFromEnv(
   env: NodeJS.ProcessEnv,
-  schema: JSONSchema
+  schema: JSONSchema,
+  options: EnvVarNamingOptions = {
+    case: 'SCREAMING_SNAKE_CASE',
+    propertySeparator: '_',
+    prefix: undefined
+  }
 ): Record<string, JSONType> {
+  if (!options.case) {
+    options.case = 'SCREAMING_SNAKE_CASE';
+  }
+  if (!options.propertySeparator) {
+    options.propertySeparator = '_';
+  }
+
   const envConfig: Record<string, JSONType> = {};
 
   const envVarNames = new Map<string, ConfigPropertyPath>();
@@ -602,14 +665,21 @@ export function loadFromEnv(
         return;
       }
 
-      let value = readFromEnvVar(schema, configPropertyPath, env, envVarNames);
+      let value = readFromEnvVar(
+        schema,
+        configPropertyPath,
+        env,
+        envVarNames,
+        options
+      );
 
       if (value === undefined) {
         value = readFromFileEnvVar(
           schema,
           configPropertyPath,
           env,
-          envVarNames
+          envVarNames,
+          options
         );
       }
 
@@ -626,11 +696,11 @@ export function loadFromEnv(
       ] = value;
     },
     visitPatternProperty(pattern, propertiesSchema, parentConfigPropertyPath) {
-      const patternRegex = getPatternRegex(pattern, propertiesSchema);
-      const envVarNamePrefix =
-        parentConfigPropertyPath.length > 0
-          ? `${getEnvVarName(parentConfigPropertyPath)}_`
-          : '';
+      const patternRegex = getPatternRegex(pattern, propertiesSchema, options);
+      const envVarNamePrefix = getEnvVarNamePrefix(
+        parentConfigPropertyPath,
+        options
+      );
 
       const candidateEnvVarNameSuffixes = getCandidateEnvVarNameSuffixes(
         env,
@@ -657,7 +727,8 @@ export function loadFromEnv(
       const discoveredProperties = discoverUnnamedProperties(
         propertiesSchema,
         candidateEnvVarNameSuffixes,
-        parentConfigPropertyPath
+        parentConfigPropertyPath,
+        options
       );
 
       for (const property of discoveredProperties) {
@@ -671,10 +742,10 @@ export function loadFromEnv(
       // Additional properties have a schema, but we don't know what they're
       // named. Their env var names will start with the env var name for this
       // field, so filter out any that don't.
-      const envVarNamePrefix =
-        parentConfigPropertyPath.length > 0
-          ? `${getEnvVarName(parentConfigPropertyPath)}_`
-          : '';
+      const envVarNamePrefix = getEnvVarNamePrefix(
+        parentConfigPropertyPath,
+        options
+      );
 
       const candidateEnvVarNameSuffixes = getCandidateEnvVarNameSuffixes(
         env,
@@ -684,7 +755,8 @@ export function loadFromEnv(
       const discoveredProperties = discoverUnnamedProperties(
         additionalPropertiesSchema,
         candidateEnvVarNameSuffixes,
-        parentConfigPropertyPath
+        parentConfigPropertyPath,
+        options
       );
 
       for (const property of discoveredProperties) {

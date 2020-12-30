@@ -19,8 +19,10 @@ A config property's environment variable name can be derived by:
 
 1. taking the JSON pointer to that option
 2. removing the `#/` prefix
-3. replacing `/` with `_`
-4. converting all `camelCase` words to `SCREAMING_SNAKE_CASE`.
+3. adding the value of `options.prefix` as a prefix, if set
+4. replacing `/` with `_` (or the value of `options.propertySeparator` if set)
+5. converting all `camelCase` words to `SCREAMING_SNAKE_CASE` (or the value of
+   `options.case` if set).
 
 For example, `#/camelCase/variable1` can be set using the
 `CAMEL_CASE_VARIABLE_1` environment variable.
@@ -48,9 +50,9 @@ set, the ancestor objects will first be initialised to empty objects.
 
 ### Loading values from the filesystem
 
-Every config property has a second environment variable, which adds a `_FILE`
-suffix to the name of the first. For example, in addition to
-`CAMEL_CASE_VARIABLE_1`, `#/camelCase/variable1` can be set using the
+Every config property has a second environment variable, which is named as if
+the config property had a child property named `file`. For example, in addition
+to `CAMEL_CASE_VARIABLE_1`, `#/camelCase/variable1` can be set using the
 `CAMEL_CASE_VARAIBLE_1_FILE` environment variable.
 
 While the environment variables without the `_FILE` suffix have their values

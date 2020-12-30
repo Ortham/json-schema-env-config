@@ -4,21 +4,120 @@ import { JSONSchema4 } from 'json-schema';
 import { loadFromEnv } from '../src/environment';
 
 describe('loadFromEnv', () => {
-  it('should turn camelCase property name into SCREAMING_SNAKE_CASE in env var name', () => {
-    const schema: JSONSchema4 = {
-      type: 'object',
-      properties: {
-        camelCasedPropertyName: {
-          type: 'string'
+  describe('Options', () => {
+    it('should turn camelCase property name into env var name using SCREAMING_SNAKE_CASE with _ property separators and no prefix by default', () => {
+      const schema: JSONSchema4 = {
+        type: 'object',
+        properties: {
+          camelCased: {
+            type: 'object',
+            properties: {
+              propertyName: {
+                type: 'string'
+              }
+            }
+          }
         }
-      }
-    };
-    const config: any = loadFromEnv(
-      { CAMEL_CASED_PROPERTY_NAME: 'test' },
-      schema
-    );
+      };
+      const config: any = loadFromEnv(
+        { CAMEL_CASED_PROPERTY_NAME: 'test' },
+        schema
+      );
 
-    expect(config.camelCasedPropertyName).toBe('test');
+      expect(config.camelCased.propertyName).toBe('test');
+    });
+
+    it('should turn camelCase property name into env var name using snake_case if configured to do so', () => {
+      const schema: JSONSchema4 = {
+        type: 'object',
+        properties: {
+          camelCased: {
+            type: 'object',
+            properties: {
+              propertyName: {
+                type: 'string'
+              }
+            }
+          }
+        }
+      };
+      const config: any = loadFromEnv(
+        { camel_cased_property_name: 'test' },
+        schema,
+        { case: 'snake_case' }
+      );
+
+      expect(config.camelCased.propertyName).toBe('test');
+    });
+
+    it('should turn camelCase property name into env var name using SCREAMING_SNAKE_CASE if configured to do so', () => {
+      const schema: JSONSchema4 = {
+        type: 'object',
+        properties: {
+          camelCased: {
+            type: 'object',
+            properties: {
+              propertyName: {
+                type: 'string'
+              }
+            }
+          }
+        }
+      };
+      const config: any = loadFromEnv(
+        { CAMEL_CASED_PROPERTY_NAME: 'test' },
+        schema,
+        { case: 'SCREAMING_SNAKE_CASE' }
+      );
+
+      expect(config.camelCased.propertyName).toBe('test');
+    });
+
+    it('should turn camelCase property name into env var name using __ property separator if configured to do so', () => {
+      const schema: JSONSchema4 = {
+        type: 'object',
+        properties: {
+          camelCased: {
+            type: 'object',
+            properties: {
+              propertyName: {
+                type: 'string'
+              }
+            }
+          }
+        }
+      };
+      const config: any = loadFromEnv(
+        { CAMEL_CASED__PROPERTY_NAME: 'test' },
+        schema,
+        { propertySeparator: '__' }
+      );
+
+      expect(config.camelCased.propertyName).toBe('test');
+    });
+
+    it('should turn camelCase property name into env var name using prefix if configured to do so', () => {
+      const schema: JSONSchema4 = {
+        type: 'object',
+        properties: {
+          camelCased: {
+            type: 'object',
+            properties: {
+              propertyName: {
+                type: 'string'
+              }
+            }
+          }
+        }
+      };
+      const config: any = loadFromEnv(
+        { APP_NAME__CAMEL_CASED__PROPERTY_NAME: 'test' },
+        schema,
+        { prefix: 'APP_NAME', propertySeparator: '__' }
+      );
+
+      expect(config.camelCased.propertyName).toBe('test');
+    });
   });
 
   it('should leave property undefined if its schema has no type property', () => {
