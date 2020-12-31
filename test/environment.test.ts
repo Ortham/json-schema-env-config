@@ -1104,6 +1104,40 @@ describe('loadFromEnv', () => {
         expect(config.object.sub.a).toBe(42);
       });
 
+      it('should distinguish between nested property names and property names that happen to contain nested property names', () => {
+        const config: any = loadFromEnv(
+          {
+            BOOK_metadata_LENGTHSUFFIX: JSON.stringify({ author: 'Joe' })
+          },
+          {
+            type: 'object',
+            properties: {
+              book: {
+                type: 'object',
+                patternProperties: {
+                  '.*length': {
+                    type: 'number'
+                  },
+                  '.*metadata': {
+                    type: 'object',
+                    properties: {
+                      length: {
+                        type: 'number'
+                      },
+                      author: {
+                        type: 'string'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        );
+
+        expect(config.book.metadata_LENGTHSUFFIX.author).toBe('Joe');
+      });
+
       it('should not overlap with named properties', () => {
         const config: any = loadFromEnv(
           {

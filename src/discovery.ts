@@ -43,18 +43,35 @@ function discoverUnnamedProperties(
       );
 
       return candidateEnvVarNameSuffixes.map((envVarSuffix) => {
-        const matchedSuffix = propertyNameSuffixes.find(
-          (propertySuffix) =>
-            envVarSuffix.includes(propertySuffix) &&
-            envVarSuffix.length > propertySuffix.length
-        );
+        const matchedSuffix = propertyNameSuffixes.find((propertySuffix) => {
+          const index = envVarSuffix.indexOf(propertySuffix);
+          if (index === -1 || index === 0) {
+            return false;
+          }
 
-        const additionalPropertyName = matchedSuffix
+          const endIndex = index + propertySuffix.length;
+          if (
+            endIndex !== envVarSuffix.length &&
+            !envVarSuffix
+              .substring(endIndex)
+              .startsWith(options.propertySeparator || '_')
+          ) {
+            // If the env var suffix contains the property name suffix but it is
+            // not at the end of the env var suffix, it must be followed by the
+            // property separator.
+            return false;
+          }
+
+          return true;
+        });
+
+        const propertyName = matchedSuffix
           ? envVarSuffix.substring(0, envVarSuffix.indexOf(matchedSuffix))
           : envVarSuffix;
 
         debug(
-          'Extracted additional property name "%s" from env var suffix "%s"',
+          'Extracted property name "%s" from env var suffix "%s" with matched property name suffix "%s"',
+          propertyName,
           envVarSuffix,
           matchedSuffix
         );
@@ -62,7 +79,7 @@ function discoverUnnamedProperties(
         return {
           schema: propertiesSchema,
           path: parentPath.concat({
-            value: additionalPropertyName,
+            value: propertyName,
             named: false
           })
         };
