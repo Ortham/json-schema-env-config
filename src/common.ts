@@ -17,6 +17,11 @@ export type EnvVarNamingOptions = {
   prefix?: string;
 };
 
+/**
+ * Thrown when the library encounters unsupported values in a JSON Schema (e.g.
+ * an unrecognised 'type' value).
+ * @extends Error
+ */
 export class UnsupportedSchema extends Error {
   constructor(message: string) {
     super(message);

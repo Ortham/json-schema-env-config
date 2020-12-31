@@ -145,6 +145,17 @@ function createParentObjects(
   return configObject;
 }
 
+/**
+ * Load config from the given environment variables, identifying relevant
+ * variables and performing type conversion according to the given schema and
+ * options.
+ * @param env The environment variables to load config from.
+ * @param schema The configuration object's JSON schema.
+ * @param options Options that control how property names are mapped to
+ *                environment variable names.
+ * @return A configuration object containing values loaded from the given
+ *         environment variables.
+ */
 export function loadFromEnv(
   env: NodeJS.ProcessEnv,
   schema: JSONSchema,

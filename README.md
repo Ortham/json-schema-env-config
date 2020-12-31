@@ -13,6 +13,38 @@ are probably also compatible. See the section below for details.
 This library does not validate that the resulting config actually conforms to
 the JSON schema: it's only interested in the data types.
 
+## Usage
+
+The library exports a single function:
+
+```typescript
+/**
+ * Load config from the given environment variables, identifying relevant
+ * variables and performing type conversion according to the given schema and
+ * options.
+ * @param env The environment variables to load config from.
+ * @param schema The configuration object's JSON schema.
+ * @param options Options that control how property names are mapped to
+ *                environment variable names.
+ * @return A configuration object containing values loaded from the given
+ *         environment variables.
+ */
+function loadFromEnv(
+  env: NodeJS.ProcessEnv,
+  schema: JSONSchema,
+  options: EnvVarNamingOptions = {
+    case: 'SCREAMING_SNAKE_CASE',
+    propertySeparator: '_',
+    prefix: undefined
+  }
+): Record<string, JSONType>
+```
+
+See `tests/environment.test.ts` for many examples of this function being called
+with different inputs and outputs.
+
+To see debug logging output, export `DEBUG=json-schema-env-config`.
+
 ## Deriving environment variable names
 
 A config property's environment variable name can be derived by:
@@ -65,6 +97,74 @@ being undefined. If the suffixed and non-suffixed env vars are both defined, the
 non-suffixed env var overrides the suffixed env var. For example,
 `CAMEL_CASE_VARAIBLE_1_FILE` can be set to the path to a file containing a
 value, but it will be ignored if `CAMEL_CASE_VARIABLE_1` is also set.
+
+### Unnamed properties
+
+This library is able to load values for config properties that are defined in
+JSON Schema using `patternProperties` and `additionalProperties`. However, as
+the names of these properties are not predetermined, they are extracted from
+the names of qualifying environment variables.
+
+An environment variable qualifies if its name starts with the expected env var
+name for the parent object of the pattern properties. If the `type` of the
+pattern property is `null`, `boolean`, `string`, `integer`, `number` or `array`,
+the env var name suffix (everything after the parent object's expected env var
+name) is used as the property name.
+
+If the `type` of the pattern property is `object` and the env var name suffix
+also includes the env var name substring for one of the object's `properties`,
+the substring from the start of the env var name suffix to the start of the
+property's substring is used as the property name. If none of the object's named
+properties appear in the env var name, the whole suffix is used as the property
+name, just like for the other `type` values.
+
+For example, given the schema
+
+```json
+{
+    "type": "object",
+    "properties": {
+        "book": {
+            "type": "object",
+            "patternProperties": {
+                ".*length": {
+                    "type": "number"
+                },
+                ".*metadata": {
+                    "type": "object",
+                    "properties": {
+                        "length": {
+                            "type": "number"
+                        },
+                        "author": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+The environment variable `BOOK_metadata_LENGTHSUFFIX='{"author":{"Joe"}}'` has a
+name starts with `BOOK_`, so it qualifies as potentially configuring a pattern
+property. It doesn't match the `.*length` pattern because patterns are
+case-sensitive. It does match the `.*metadata` pattern, and although the
+`LENGTH` substring matches the `length` property, it's not at the end of the
+string and isn't followed by the property separator `_`, so can't set the
+`length` property. As such, the env var is used to set the config object below.
+
+```javascript
+{
+    METADATA_LENGTHSUFFIX: {
+        author: "Joe"
+    }
+}
+```
+
+The process for discovering additional properties is equivalent to discovering
+properties for the pattern `.*`.
 
 ## JSON Schema compatibility
 
