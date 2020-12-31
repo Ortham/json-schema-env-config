@@ -33,8 +33,8 @@ function loadFromEnv(
   env: NodeJS.ProcessEnv,
   schema: JSONSchema,
   options: EnvVarNamingOptions = {
-    case: 'SCREAMING_SNAKE_CASE',
-    propertySeparator: '_',
+    case: 'snake_case',
+    propertySeparator: '__',
     prefix: undefined
   }
 ): Record<string, JSONType>
@@ -53,11 +53,11 @@ A config property's environment variable name can be derived by:
 2. removing the `#/` prefix
 3. adding the value of `options.prefix` as a prefix, if set
 4. replacing `/` with `_` (or the value of `options.propertySeparator` if set)
-5. converting all `camelCase` words to `SCREAMING_SNAKE_CASE` (or the value of
+5. converting all `camelCase` words to `snake_case` (or the value of
    `options.case` if set).
 
 For example, `#/camelCase/variable1` can be set using the
-`CAMEL_CASE_VARIABLE_1` environment variable.
+`camel_case__variable_1` environment variable.
 
 Environment variable values are parsed as JSON, and must be parseable as the
 type given in the JSON Schema, e.g. a `boolean` property's environment variable
@@ -84,19 +84,19 @@ set, the ancestor objects will first be initialised to empty objects.
 
 Every config property has a second environment variable, which is named as if
 the config property had a child property named `file`. For example, in addition
-to `CAMEL_CASE_VARIABLE_1`, `#/camelCase/variable1` can be set using the
-`CAMEL_CASE_VARAIBLE_1_FILE` environment variable.
+to `camel_case__variable_1`, `#/camelCase/variable1` can be set using the
+`camel_case__variable_1__file` environment variable.
 
-While the environment variables without the `_FILE` suffix have their values
-used directly, the `_FILE`-suffixed variables must be set to the path to a file.
+While the environment variables without the `__file` suffix have their values
+used directly, the `__file`-suffixed variables must be set to the path to a file.
 The file content is read as a UTF-8 string and leading and trailing whitespace
 is trimmed, and the resulting value is set as the config property's value.
 
 If the file cannot be read or is empty, SG treats this environment variable as
 being undefined. If the suffixed and non-suffixed env vars are both defined, the
 non-suffixed env var overrides the suffixed env var. For example,
-`CAMEL_CASE_VARAIBLE_1_FILE` can be set to the path to a file containing a
-value, but it will be ignored if `CAMEL_CASE_VARIABLE_1` is also set.
+`camel_case__variable_1__file` can be set to the path to a file containing a
+value, but it will be ignored if `camel_case__variable_1` is also set.
 
 ### Unnamed properties
 
@@ -127,7 +127,7 @@ For example, given the schema
         "book": {
             "type": "object",
             "patternProperties": {
-                ".*length": {
+                ".*LENGTH": {
                     "type": "number"
                 },
                 ".*metadata": {
@@ -147,17 +147,17 @@ For example, given the schema
 }
 ```
 
-The environment variable `BOOK_metadata_LENGTHSUFFIX='{"author":{"Joe"}}'` has a
-name starts with `BOOK_`, so it qualifies as potentially configuring a pattern
-property. It doesn't match the `.*length` pattern because patterns are
+The environment variable `book__metadata__lengthsuffix='{"author":{"Joe"}}'` has
+a name starts with `book__`, so it qualifies as potentially configuring a
+pattern property. It doesn't match the `.*LENGTH` pattern because patterns are
 case-sensitive. It does match the `.*metadata` pattern, and although the
-`LENGTH` substring matches the `length` property, it's not at the end of the
-string and isn't followed by the property separator `_`, so can't set the
+`length` substring matches the `length` property, it's not at the end of the
+string and isn't followed by the property separator `__`, so can't set the
 `length` property. As such, the env var is used to set the config object below.
 
 ```javascript
 {
-    METADATA_LENGTHSUFFIX: {
+    metadata__lengthsuffix: {
         author: "Joe"
     }
 }
@@ -208,10 +208,10 @@ have different types depending on its siblings.
 For example:
 
 ```js
-const config: any = loadFromEnv(
+const config = loadFromEnv(
     {
-        ANY_OF_PROPERTY_KEY_1: '3.14',
-        ANY_OF_PROPERTY_KEY_2: 'true'
+        any_of_property__key_1: '3.14',
+        any_of_property__key_2: 'true'
     },
     {
         type: 'object',

@@ -5,7 +5,7 @@ import { loadFromEnv } from '../src/environment';
 
 describe('loadFromEnv', () => {
   describe('Options', () => {
-    it('should turn camelCase property name into env var name using SCREAMING_SNAKE_CASE with _ property separators and no prefix by default', () => {
+    it('should turn camelCase property name into env var name using snake_case with __ property separators and no prefix by default', () => {
       const schema: JSONSchema4 = {
         type: 'object',
         properties: {
@@ -20,7 +20,7 @@ describe('loadFromEnv', () => {
         }
       };
       const config: any = loadFromEnv(
-        { CAMEL_CASED_PROPERTY_NAME: 'test' },
+        { camel_cased__property_name: 'test' },
         schema
       );
 
@@ -42,7 +42,7 @@ describe('loadFromEnv', () => {
         }
       };
       const config: any = loadFromEnv(
-        { camel_cased_property_name: 'test' },
+        { camel_cased__property_name: 'test' },
         schema,
         { case: 'snake_case' }
       );
@@ -65,7 +65,7 @@ describe('loadFromEnv', () => {
         }
       };
       const config: any = loadFromEnv(
-        { CAMEL_CASED_PROPERTY_NAME: 'test' },
+        { CAMEL_CASED__PROPERTY_NAME: 'test' },
         schema,
         { case: 'SCREAMING_SNAKE_CASE' }
       );
@@ -73,7 +73,7 @@ describe('loadFromEnv', () => {
       expect(config.camelCased.propertyName).toBe('test');
     });
 
-    it('should turn camelCase property name into env var name using __ property separator if configured to do so', () => {
+    it('should turn camelCase property name into env var name using _ property separator if configured to do so', () => {
       const schema: JSONSchema4 = {
         type: 'object',
         properties: {
@@ -88,9 +88,9 @@ describe('loadFromEnv', () => {
         }
       };
       const config: any = loadFromEnv(
-        { CAMEL_CASED__PROPERTY_NAME: 'test' },
+        { camel_cased_property_name: 'test' },
         schema,
-        { propertySeparator: '__' }
+        { propertySeparator: '_' }
       );
 
       expect(config.camelCased.propertyName).toBe('test');
@@ -111,9 +111,9 @@ describe('loadFromEnv', () => {
         }
       };
       const config: any = loadFromEnv(
-        { APP_NAME__CAMEL_CASED__PROPERTY_NAME: 'test' },
+        { APP_NAME__camel_cased__property_name: 'test' },
         schema,
-        { prefix: 'APP_NAME', propertySeparator: '__' }
+        { prefix: 'APP_NAME' }
       );
 
       expect(config.camelCased.propertyName).toBe('test');
@@ -127,7 +127,7 @@ describe('loadFromEnv', () => {
         unknownType: {}
       }
     };
-    const config: any = loadFromEnv({ UNKNOWN_TYPE: 'test' }, schema);
+    const config: any = loadFromEnv({ unknown_type: 'test' }, schema);
 
     expect(config.unknownType).toBeUndefined();
   });
@@ -141,12 +141,12 @@ describe('loadFromEnv', () => {
         }
       }
     };
-    const config = loadFromEnv({ MULTI_TYPE: '3.14' }, schema);
+    const config = loadFromEnv({ multi_type: '3.14' }, schema);
 
     expect(config.multiType).toBeCloseTo(3.14);
   });
 
-  it('should read value from env var if it does not end in _FILE', () => {
+  it('should read value from env var if it does not end in __file', () => {
     const schema: JSONSchema4 = {
       type: 'object',
       properties: {
@@ -155,12 +155,12 @@ describe('loadFromEnv', () => {
         }
       }
     };
-    const config: any = loadFromEnv({ STR: 'test-string' }, schema);
+    const config: any = loadFromEnv({ str: 'test-string' }, schema);
 
     expect(config.str).toBe('test-string');
   });
 
-  it('should read value from env var if it does not end in _FILE and the same env var with a _FILE suffix is defined', () => {
+  it('should read value from env var if it does not end in __file and the same env var with a __file suffix is defined', () => {
     const schema: JSONSchema4 = {
       type: 'object',
       properties: {
@@ -170,14 +170,14 @@ describe('loadFromEnv', () => {
       }
     };
     const config: any = loadFromEnv(
-      { STR: 'test-string', STR_FILE: `${__dirname}/schema.json` },
+      { str: 'test-string', str__file: `${__dirname}/schema.json` },
       schema
     );
 
     expect(config.str).toBe('test-string');
   });
 
-  it('should read value from the file path given by an env var ending in _FILE if it is set, trimming whitespace', () => {
+  it('should read value from the file path given by an env var ending in __file if it is set, trimming whitespace', () => {
     const schema: JSONSchema4 = {
       type: 'object',
       properties: {
@@ -186,7 +186,7 @@ describe('loadFromEnv', () => {
         }
       }
     };
-    const config: any = loadFromEnv({ STR_FILE: __filename }, schema);
+    const config: any = loadFromEnv({ str__file: __filename }, schema);
 
     const fileContent = readFileSync(__filename, 'utf-8').trim();
     expect(config.str).toBe(fileContent);
@@ -202,7 +202,7 @@ describe('loadFromEnv', () => {
           }
         }
       };
-      const config: any = loadFromEnv({ STR: 'test-string' }, schema);
+      const config: any = loadFromEnv({ str: 'test-string' }, schema);
 
       expect(config.str).toBe('test-string');
     });
@@ -219,13 +219,13 @@ describe('loadFromEnv', () => {
     };
 
     it('should convert env var values for number properties', () => {
-      const config: any = loadFromEnv({ NUM: '3.14' }, schema);
+      const config: any = loadFromEnv({ num: '3.14' }, schema);
 
       expect(config.num).toBeCloseTo(3.14);
     });
 
     it('should leave number property undefined if env var value is non-numeric', () => {
-      const config: any = loadFromEnv({ NUM: '3.14one' }, schema);
+      const config: any = loadFromEnv({ num: '3.14one' }, schema);
 
       expect(config.num).toBeUndefined();
     });
@@ -242,19 +242,19 @@ describe('loadFromEnv', () => {
     };
 
     it('should convert env var values for integer properties', () => {
-      const config: any = loadFromEnv({ INT: '3' }, schema);
+      const config: any = loadFromEnv({ int: '3' }, schema);
 
       expect(config.int).toBe(3);
     });
 
     it('should leave integer property undefined if env var value has a non-integer value', () => {
-      const config: any = loadFromEnv({ INT: '3.14' }, schema);
+      const config: any = loadFromEnv({ int: '3.14' }, schema);
 
       expect(config.int).toBeUndefined();
     });
 
     it('should leave integer property undefined if env var value is non-numeric', () => {
-      const config: any = loadFromEnv({ INT: 'three' }, schema);
+      const config: any = loadFromEnv({ int: 'three' }, schema);
 
       expect(config.int).toBeUndefined();
     });
@@ -271,37 +271,37 @@ describe('loadFromEnv', () => {
     };
 
     it('should convert case-insensitive env var value true to true for boolean properties', () => {
-      const config: any = loadFromEnv({ BOOL: 'TrUe' }, schema);
+      const config: any = loadFromEnv({ bool: 'TrUe' }, schema);
 
       expect(config.bool).toBe(true);
     });
 
     it('should convert case-insensitive env var value false to false for boolean properties', () => {
-      const config: any = loadFromEnv({ BOOL: 'FaLsE' }, schema);
+      const config: any = loadFromEnv({ bool: 'FaLsE' }, schema);
 
       expect(config.bool).toBe(false);
     });
 
     it('should convert env var values other than true to undefined for boolean properties', () => {
-      let config: any = loadFromEnv({ BOOL: '1' }, schema);
+      let config: any = loadFromEnv({ bool: '1' }, schema);
       expect(config.bool).toBeUndefined();
 
-      config = loadFromEnv({ BOOL: '0' }, schema);
+      config = loadFromEnv({ bool: '0' }, schema);
       expect(config.bool).toBeUndefined();
 
-      config = loadFromEnv({ BOOL: '-1' }, schema);
+      config = loadFromEnv({ bool: '-1' }, schema);
       expect(config.bool).toBeUndefined();
 
-      config = loadFromEnv({ BOOL: 'true1' }, schema);
+      config = loadFromEnv({ bool: 'true1' }, schema);
       expect(config.bool).toBeUndefined();
 
-      config = loadFromEnv({ BOOL: 'false0' }, schema);
+      config = loadFromEnv({ bool: 'false0' }, schema);
       expect(config.bool).toBeUndefined();
 
-      config = loadFromEnv({ BOOL: 'yes' }, schema);
+      config = loadFromEnv({ bool: 'yes' }, schema);
       expect(config.bool).toBeUndefined();
 
-      config = loadFromEnv({ BOOL: 'no' }, schema);
+      config = loadFromEnv({ bool: 'no' }, schema);
       expect(config.bool).toBeUndefined();
     });
   });
@@ -317,13 +317,13 @@ describe('loadFromEnv', () => {
     };
 
     it('should set null property to null if env var value is "null"', () => {
-      const config: any = loadFromEnv({ NULL: 'null' }, schema);
+      const config: any = loadFromEnv({ null: 'null' }, schema);
 
       expect(config.null).toBeNull();
     });
 
     it('should leave null property undefined if env var value is not "null"', () => {
-      const config: any = loadFromEnv({ NULL: '' }, schema);
+      const config: any = loadFromEnv({ null: '' }, schema);
 
       expect(config.null).toBeUndefined();
     });
@@ -357,7 +357,7 @@ describe('loadFromEnv', () => {
 
     it('should parse array property env var value as JSON', () => {
       const config: any = loadFromEnv(
-        { STRINGS: JSON.stringify(['a', 'b', 'c']) },
+        { strings: JSON.stringify(['a', 'b', 'c']) },
         schema
       );
 
@@ -365,26 +365,26 @@ describe('loadFromEnv', () => {
     });
 
     it('should parse array property env var value as CSV if it cannot be parsed as JSON', () => {
-      const config: any = loadFromEnv({ STRINGS: 'a,b,c' }, schema);
+      const config: any = loadFromEnv({ strings: 'a,b,c' }, schema);
 
       expect(config.strings).toEqual(['a', 'b', 'c']);
     });
 
     it('should convert CSV array elements to their schema type', () => {
-      const config: any = loadFromEnv({ NUMBERS: '1,2,3' }, schema);
+      const config: any = loadFromEnv({ numbers: '1,2,3' }, schema);
 
       expect(config.numbers).toEqual([1, 2, 3]);
     });
 
     it('should leave array property undefined if a CSV array element cannot be converted to its schema type', () => {
-      const config: any = loadFromEnv({ NUMBERS: '1,2,c' }, schema);
+      const config: any = loadFromEnv({ numbers: '1,2,c' }, schema);
 
       expect(config.numbers).toBeUndefined();
     });
 
     it('should set array property if JSON array has no items schema', () => {
       const config: any = loadFromEnv(
-        { NO_ITEMS: JSON.stringify(['a', 'b', 'c']) },
+        { no_items: JSON.stringify(['a', 'b', 'c']) },
         schema
       );
 
@@ -392,13 +392,13 @@ describe('loadFromEnv', () => {
     });
 
     it('should leave array property undefined if CSV array has no items schema', () => {
-      const config: any = loadFromEnv({ NO_ITEMS: 'a,b,c' }, schema);
+      const config: any = loadFromEnv({ no_items: 'a,b,c' }, schema);
 
       expect(config.noItems).toBeUndefined();
     });
 
     it('supports CSV array items schema arrays', () => {
-      const config: any = loadFromEnv({ ITEMS_ARRAY: 'one,2' }, schema);
+      const config: any = loadFromEnv({ items_array: 'one,2' }, schema);
       expect(config.itemsArray).toEqual(['one', 2]);
     });
 
@@ -415,14 +415,14 @@ describe('loadFromEnv', () => {
       };
 
       const config: any = loadFromEnv(
-        { ADDITIONAL_ITEMS_ARRAY: 'one,2,3' },
+        { additional_items_array: 'one,2,3' },
         multiItemArraySchema
       );
       expect(config.additionalItemsArray).toEqual(['one', 2, 3]);
     });
 
     it('should leave array property undefined if the CSV array is longer than the items schema array and additionalItems is not defined', () => {
-      const config: any = loadFromEnv({ ITEMS_ARRAY: 'one,2,3' }, schema);
+      const config: any = loadFromEnv({ items_array: 'one,2,3' }, schema);
       expect(config.itemsArray).toBeUndefined();
     });
   });
@@ -439,7 +439,7 @@ describe('loadFromEnv', () => {
         }
       };
       const config: any = loadFromEnv(
-        { NO_PROPERTIES: JSON.stringify(object) },
+        { no_properties: JSON.stringify(object) },
         schema
       );
 
@@ -461,7 +461,7 @@ describe('loadFromEnv', () => {
 
       it('should be able to set a named object property using an env var', () => {
         const config: any = loadFromEnv(
-          { NAMED_NUMERIC_PROPERTY: '42' },
+          { named_numeric_property: '42' },
           schema
         );
 
@@ -470,7 +470,7 @@ describe('loadFromEnv', () => {
 
       it('should create parent object when setting a named property', () => {
         const config: any = loadFromEnv(
-          { NAMED_NUMERIC_PROPERTY: '42' },
+          { named_numeric_property: '42' },
           schema
         );
 
@@ -479,7 +479,7 @@ describe('loadFromEnv', () => {
 
       it('should be able to set multiple named properties independently', () => {
         const config: any = loadFromEnv(
-          { NAMED_NUMERIC_PROPERTY: '42', NAMED_BOOLEAN_PROPERTY: 'true' },
+          { named_numeric_property: '42', named_boolean_property: 'true' },
           schema
         );
 
@@ -502,7 +502,7 @@ describe('loadFromEnv', () => {
         const config: any = loadFromEnv(
           {
             codeword: 'test',
-            'SUB_secret-code': 'other'
+            'sub__secret-code': 'other'
           },
           {
             type: 'object',
@@ -530,21 +530,21 @@ describe('loadFromEnv', () => {
 
       it('should treat patterns as Unicode-aware and case-sensitive', () => {
         const config: any = loadFromEnv(
-          { 'CODE👌': '3' },
+          { 'code👌': '3' },
           {
             type: 'object',
             patternProperties: {
-              code: {
+              CODE: {
                 type: 'number'
               },
-              'CODE.*\\p{Emoji_Presentation}': {
+              'code.*\\p{Emoji_Presentation}': {
                 type: 'string'
               }
             }
           }
         );
 
-        expect(config['CODE👌']).toBe('3');
+        expect(config['code👌']).toBe('3');
       });
 
       it('should be able to match a single pattern against multiple env vars', () => {
@@ -736,7 +736,7 @@ describe('loadFromEnv', () => {
       it('should be able to set a property in a descendant object value of a pattern key', () => {
         const config: any = loadFromEnv(
           {
-            object_SUB_A: '42'
+            object__sub__a: '42'
           },
           {
             type: 'object',
@@ -764,8 +764,8 @@ describe('loadFromEnv', () => {
       it('should be able to set a should be able to set a property in a descendant object value of a pattern key that ends with a literal $', () => {
         const config: any = loadFromEnv(
           {
-            object$_SUB_A: '42',
-            object_SUB_A: '24'
+            object$__sub__a: '42',
+            object__sub__a: '24'
           },
           {
             type: 'object',
@@ -799,8 +799,8 @@ describe('loadFromEnv', () => {
       it('should be able to set a should be able to set a property in a descendant object value of a pattern key that ends with a $', () => {
         const config: any = loadFromEnv(
           {
-            object$_SUB_A: '42',
-            object_SUB_A: '24'
+            object$__sub__a: '42',
+            object__sub__a: '24'
           },
           {
             type: 'object',
@@ -834,8 +834,8 @@ describe('loadFromEnv', () => {
       it('should not override named property values', () => {
         const config: any = loadFromEnv(
           {
-            NAMED_OBJECT_A: '3.14',
-            OBJECT_A: 'test'
+            named_object__a: '3.14',
+            object__a: 'test'
           },
           {
             type: 'object',
@@ -863,7 +863,7 @@ describe('loadFromEnv', () => {
         expect(config.namedObject).toEqual({
           a: 3.14
         });
-        expect(config.OBJECT.a).toBe('test');
+        expect(config.object.a).toBe('test');
       });
     });
 
@@ -1029,8 +1029,8 @@ describe('loadFromEnv', () => {
       it('should be able to set multiple named object properties independently', () => {
         const config: any = loadFromEnv(
           {
-            property_NAME: 'John',
-            property_NUMBER: '42'
+            property__name: 'John',
+            property__number: '42'
           },
           {
             type: 'object',
@@ -1055,8 +1055,8 @@ describe('loadFromEnv', () => {
       it('should recurse into object additional properties', () => {
         const config: any = loadFromEnv(
           {
-            property_OBJ_a: '1',
-            property_OBJ_b: '2'
+            property__obj__a: '1',
+            property__obj__b: '2'
           },
           {
             type: 'object',
@@ -1081,7 +1081,7 @@ describe('loadFromEnv', () => {
       it('should recurse into object properties', () => {
         const config: any = loadFromEnv(
           {
-            object_SUB_A: '42'
+            object__sub__a: '42'
           },
           {
             type: 'object',
@@ -1107,7 +1107,7 @@ describe('loadFromEnv', () => {
       it('should distinguish between nested property names and property names that happen to contain nested property names', () => {
         const config: any = loadFromEnv(
           {
-            BOOK_metadata_LENGTHSUFFIX: JSON.stringify({ author: 'Joe' })
+            book__METADATA__lengthsuffix: JSON.stringify({ author: 'Joe' })
           },
           {
             type: 'object',
@@ -1118,7 +1118,7 @@ describe('loadFromEnv', () => {
                   '.*length': {
                     type: 'number'
                   },
-                  '.*metadata': {
+                  '.*METADATA': {
                     type: 'object',
                     properties: {
                       length: {
@@ -1135,14 +1135,14 @@ describe('loadFromEnv', () => {
           }
         );
 
-        expect(config.book.metadata_LENGTHSUFFIX.author).toBe('Joe');
+        expect(config.book.METADATA__lengthsuffix.author).toBe('Joe');
       });
 
       it('should not overlap with named properties', () => {
         const config: any = loadFromEnv(
           {
-            NAMED_OBJECT_A: '3.14',
-            OBJECT_A: 'test'
+            named_object__a: '3.14',
+            object__a: 'test'
           },
           {
             type: 'object',
@@ -1170,14 +1170,14 @@ describe('loadFromEnv', () => {
         expect(config.namedObject).toEqual({
           a: 3.14
         });
-        expect(config.OBJECT.a).toBe('test');
+        expect(config.object.a).toBe('test');
       });
 
       it('should overlap with a named property if the named object env var value is ignored', () => {
         const config: any = loadFromEnv(
           {
-            NAMED_OBJECT_A: 'three',
-            OBJECT_A: 'test'
+            named_object__a: 'three',
+            object__a: 'test'
           },
           {
             type: 'object',
@@ -1202,15 +1202,15 @@ describe('loadFromEnv', () => {
           }
         );
 
-        expect(config.NAMED_OBJECT.a).toBe('three');
-        expect(config.OBJECT.a).toBe('test');
+        expect(config.named_object.a).toBe('three');
+        expect(config.object.a).toBe('test');
       });
 
       it('should not overlap with pattern properties', () => {
         const config: any = loadFromEnv(
           {
-            PATTERN_OBJECT_A: '3.14',
-            OBJECT_A: 'test'
+            PATTERN_OBJECT__a: '3.14',
+            OBJECT__a: 'test'
           },
           {
             type: 'object',
@@ -1251,7 +1251,7 @@ describe('loadFromEnv', () => {
         it('should try to parse property using the schemas in the order they are given, stopping on success', () => {
           const config: any = loadFromEnv(
             {
-              PROPERTY: '3.14'
+              property: '3.14'
             },
             {
               type: 'object',
@@ -1273,7 +1273,7 @@ describe('loadFromEnv', () => {
         it(`should recurse into object properties inside an ${keyword} schema`, () => {
           const config: any = loadFromEnv(
             {
-              PROPERTY_KEY: '3.14'
+              property__key: '3.14'
             },
             {
               type: 'object',
@@ -1320,8 +1320,8 @@ describe('loadFromEnv', () => {
         it(`sets properties of objects inside an ${keyword} schema independently`, () => {
           const config: any = loadFromEnv(
             {
-              PROPERTY_KEY_1: '3.14',
-              PROPERTY_KEY_2: 'true'
+              property__key_1: '3.14',
+              property__key_2: 'true'
             },
             {
               type: 'object',

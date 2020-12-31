@@ -84,7 +84,7 @@ function readFromFileEnvVar(
   options: EnvVarNamingOptions
 ): JSONType | undefined {
   const envVarName = getEnvVarName(
-    configPropertyPath.concat({ value: 'FILE', named: false }),
+    configPropertyPath.concat({ value: 'file', named: true }),
     options
   );
   const envVarValue = env[envVarName];
@@ -160,16 +160,16 @@ export function loadFromEnv(
   env: NodeJS.ProcessEnv,
   schema: JSONSchema,
   options: EnvVarNamingOptions = {
-    case: 'SCREAMING_SNAKE_CASE',
-    propertySeparator: '_',
+    case: 'snake_case',
+    propertySeparator: '__',
     prefix: undefined
   }
 ): Record<string, JSONType> {
   if (!options.case) {
-    options.case = 'SCREAMING_SNAKE_CASE';
+    options.case = 'snake_case';
   }
   if (!options.propertySeparator) {
-    options.propertySeparator = '_';
+    options.propertySeparator = '__';
   }
 
   const envConfig: Record<string, JSONType> = {};
