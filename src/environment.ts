@@ -1,9 +1,20 @@
 import { readFileSync } from 'fs';
 import { isObject } from 'lodash';
 import debugConstructor from 'debug';
-import { EnvVarNamingOptions, JSONSchema, JSONType } from './common';
+import {
+  DEFAULT_OPTIONS,
+  EnvVarNamingOptions,
+  initialiseOptions,
+  JSONSchema,
+  JSONType
+} from './common';
 import { parseEnvVarValue } from './parsing';
-import { ConfigPropertyPath, Visitor, walkConfigProperties } from './walking';
+import {
+  ConfigPropertyPath,
+  META_PATH_ITEM_FILE,
+  Visitor,
+  walkConfigProperties
+} from './walking';
 import {
   discoverAdditionalProperties,
   discoverPatternProperties
@@ -58,6 +69,7 @@ function readFromEnvVar(
   }
 
   if (envVarValue === undefined) {
+    debug('Could not find env var named "%s" in %j', envVarName, env);
     return undefined;
   }
 
@@ -84,7 +96,7 @@ function readFromFileEnvVar(
   options: EnvVarNamingOptions
 ): JSONType | undefined {
   const envVarName = getEnvVarName(
-    configPropertyPath.concat({ value: 'file', named: true }),
+    configPropertyPath.concat(META_PATH_ITEM_FILE),
     options
   );
   const envVarValue = env[envVarName];
@@ -118,7 +130,35 @@ function readFromFileEnvVar(
   return value;
 }
 
-function createParentObjects(
+export function readFromEnvVars(
+  schema: JSONSchema,
+  configPropertyPath: ConfigPropertyPath,
+  env: NodeJS.ProcessEnv,
+  envVarNames: Map<string, ConfigPropertyPath>,
+  options: EnvVarNamingOptions
+): JSONType | undefined {
+  let value = readFromEnvVar(
+    schema,
+    configPropertyPath,
+    env,
+    envVarNames,
+    options
+  );
+
+  if (value === undefined) {
+    value = readFromFileEnvVar(
+      schema,
+      configPropertyPath,
+      env,
+      envVarNames,
+      options
+    );
+  }
+
+  return value;
+}
+
+export function createParentObjects(
   configPropertyPath: ConfigPropertyPath,
   rootObject: Record<string, JSONType>
 ): Record<string, JSONType> {
@@ -127,6 +167,9 @@ function createParentObjects(
     0,
     configPropertyPath.length - 1
   )) {
+    if (pathItem.meta) {
+      continue;
+    }
     if (configObject[pathItem.value] === undefined) {
       configObject[pathItem.value] = {};
     }
@@ -159,18 +202,10 @@ function createParentObjects(
 export function loadFromEnv(
   env: NodeJS.ProcessEnv,
   schema: JSONSchema,
-  options: EnvVarNamingOptions = {
-    case: 'snake_case',
-    propertySeparator: '__',
-    prefix: undefined
-  }
+  options: EnvVarNamingOptions = DEFAULT_OPTIONS
 ): Record<string, JSONType> {
-  if (!options.case) {
-    options.case = 'snake_case';
-  }
-  if (!options.propertySeparator) {
-    options.propertySeparator = '__';
-  }
+  // eslint-disable-next-line no-param-reassign
+  options = initialiseOptions(options);
 
   const envConfig: Record<string, JSONType> = {};
 
@@ -182,23 +217,13 @@ export function loadFromEnv(
         return;
       }
 
-      let value = readFromEnvVar(
+      const value = readFromEnvVars(
         schema,
         configPropertyPath,
         env,
         envVarNames,
         options
       );
-
-      if (value === undefined) {
-        value = readFromFileEnvVar(
-          schema,
-          configPropertyPath,
-          env,
-          envVarNames,
-          options
-        );
-      }
 
       if (value === undefined) {
         return;

@@ -1,2 +1,9 @@
 export { loadFromEnv } from './src/environment';
-export { UnsupportedSchema } from './src/common';
+export { overrideArrayValues } from './src/override';
+export {
+  JSONSchema,
+  JSONType,
+  EnvVarNamingOptions,
+  UnsupportedSchema,
+  DEFAULT_OPTIONS
+} from './src/common';

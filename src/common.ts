@@ -27,3 +27,24 @@ export class UnsupportedSchema extends Error {
     super(message);
   }
 }
+
+export const DEFAULT_OPTIONS: EnvVarNamingOptions = {
+  case: 'snake_case',
+  propertySeparator: '__',
+  prefix: undefined
+};
+
+export function initialiseOptions(
+  options: EnvVarNamingOptions
+): EnvVarNamingOptions {
+  const initialisedOptions = Object.assign({}, options);
+
+  if (!initialisedOptions.case) {
+    initialisedOptions.case = 'snake_case';
+  }
+  if (!initialisedOptions.propertySeparator) {
+    initialisedOptions.propertySeparator = '__';
+  }
+
+  return initialisedOptions;
+}

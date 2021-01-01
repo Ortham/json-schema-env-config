@@ -15,7 +15,7 @@ the JSON schema: it's only interested in the data types.
 
 ## Usage
 
-The library exports a single function:
+The library exports two functions:
 
 ```typescript
 /**
@@ -38,10 +38,33 @@ function loadFromEnv(
     prefix: undefined
   }
 ): Record<string, JSONType>
+
+/**
+ * Override property values in arrays of homogeneous objects using config loaded
+ * from environment variables, performing type conversion according to the given
+ * schema and options.
+ * @param config The existing config containing the arrays to override.
+ * @param env The environment variables to load overriding config from.
+ * @param schema The configuration object's JSON schema.
+ * @param options Options that control how property names are mapped to
+ *                environment variable names.
+ * @return A copy of the configuration object that has array values overridden
+ *         according to the given environment variables.
+ */
+export function overrideArrayValues(
+  config: Record<string, JSONType>,
+  env: NodeJS.ProcessEnv,
+  schema: JSONSchema,
+  options: EnvVarNamingOptions = {
+    case: 'snake_case',
+    propertySeparator: '__',
+    prefix: undefined
+  }
+): Record<string, JSONType>
 ```
 
-See `tests/environment.test.ts` for many examples of this function being called
-with different inputs and outputs.
+See `tests/environment.test.ts` and `tests/override.test.ts` for many examples
+of these function being called with different inputs and outputs.
 
 To see debug logging output, export `DEBUG=json-schema-env-config`.
 
@@ -165,6 +188,149 @@ string and isn't followed by the property separator `__`, so can't set the
 
 The process for discovering additional properties is equivalent to discovering
 properties for the pattern `.*`.
+
+### Setting properties in array element objects
+
+Given a config property that is an array of homogeneous objects, as well as
+setting the value of the whole array, it's possible to do one of the following:
+
+* Set a property to the same value for every element of an array
+* Set a property value for each element of an array.
+
+This includes the ability to set the values of nested properties, including
+those defined as pattern or additional properties.
+
+It's not possible to combine or nest setting every or each element of arrays,
+i.e. you can't set a property in every/each element of an array in every/each
+element of another array.
+
+An array of objects is considered to by homogeneous if its schema satisfies all
+of the following conditions:
+
+1. `items` and/or `additionalItems` are defined.
+2. If `items` is defined and not an array, its `type` property is set to
+   `object`.
+3. If `items` is defined and an array, all elements of the array are deeply
+   equal and have a `type` property is set to `object`.
+4. If `additionalItems` is defined, its `type` property is set to `object`.
+5. If `items` and `additionalItems` are both defined and `items` is an array,
+   its first element must be deeply equal to the value of `additionalItems`.
+6. If `items` and `additionalItems` are both defined and `items` is not an
+   array, its value must be deeply equal to the value of `additionalItems`.
+
+#### Setting a single property value for every element
+
+It's possible to set a single value for a property in every element of an array
+of homogeneous objects by defining an environment variable that has a name of
+the form `<env var name for array>__every__<env var name for property>` and a
+value that is of the correct type for the target property.
+
+For example, given a schema like
+
+```json
+{
+    "type": "object",
+    "properties": {
+    "array": {
+        "type": "array",
+        "items": {
+        "type": "object",
+        "properties": {
+            "prop1": {
+            "type": "string"
+            },
+            "prop2": {
+            "type": "number"
+            }
+        }
+        }
+    }
+    }
+}
+```
+
+and an existing config value of
+
+```javascript
+{
+    array: [
+        { prop1: 'a', prop2: 0 },
+        { prop1: 'b' }
+    ]
+}
+```
+
+and setting the environment variable `array__every__prop_2=1` would cause
+`overrideArrayValues()` to return
+
+```javascript
+{
+    array: [
+        { prop1: 'a', prop2: 1 },
+        { prop1: 'b', prop2: 1 }
+    ]
+}
+```
+
+#### Setting a property value for each element
+
+It's also possible to set a different value for a property in each element of
+an array of homogeneous objects by defining an environment variable that has a
+name of the form `<env var name for array>__each__<env var name for property>`
+and a value that is an array of values that are of the correct type for the
+target property.
+
+Each element in the environment variable value array will be applied to the
+target property in the corresponding element object in the target array. If
+the target and value arrays are of different lengths, changes will only be made
+up to the length of the shorter array.
+
+For example, given a schema like
+
+```json
+{
+    "type": "object",
+    "properties": {
+    "array": {
+        "type": "array",
+        "items": {
+        "type": "object",
+        "properties": {
+            "prop1": {
+            "type": "string"
+            },
+            "prop2": {
+            "type": "number"
+            }
+        }
+        }
+    }
+    }
+}
+```
+
+and an existing config value of
+
+```javascript
+{
+    array: [
+        { prop1: 'a', prop2: 0 },
+        { prop1: 'b' }
+    ]
+}
+```
+
+and setting the environment variable `array__each__prop_2=1,2` would cause
+`overrideArrayValues()` to return
+
+```javascript
+{
+    array: [
+        { prop1: 'a', prop2: 1 },
+        { prop1: 'b', prop2: 2 }
+    ]
+}
+```
 
 ## JSON Schema compatibility
 

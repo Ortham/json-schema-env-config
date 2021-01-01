@@ -22,8 +22,18 @@ export type Visitor = {
   ) => void;
 };
 
-export type ConfigPropertyPathItem = { value: string; named: boolean };
+export type ConfigPropertyPathItem = {
+  value: string;
+  meta?: boolean;
+  named: boolean;
+};
 export type ConfigPropertyPath = ConfigPropertyPathItem[];
+
+export const META_PATH_ITEM_FILE = { value: 'file', meta: true, named: true };
+
+export const META_PATH_ITEM_EVERY = { value: 'every', meta: true, named: true };
+
+export const META_PATH_ITEM_EACH = { value: 'each', meta: true, named: true };
 
 export function walkConfigProperties(
   schema: JSONSchema,
