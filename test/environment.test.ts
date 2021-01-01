@@ -370,6 +370,12 @@ describe('loadFromEnv', () => {
       expect(config.strings).toEqual(['a', 'b', 'c']);
     });
 
+    it('should parse array property env var value as CSV if it cannot be parsed as a JSON array', () => {
+      const config: any = loadFromEnv({ strings: 'a' }, schema);
+
+      expect(config.strings).toEqual(['a']);
+    });
+
     it('should convert CSV array elements to their schema type', () => {
       const config: any = loadFromEnv({ numbers: '1,2,3' }, schema);
 

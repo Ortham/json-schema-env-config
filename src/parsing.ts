@@ -98,7 +98,11 @@ function parseArray(
   // or they can be JSON. The values themselves also need to be
   // separately converted if the env value is interpreted as CSV.
   try {
-    return JSON.parse(envVarValue);
+    const value = JSON.parse(envVarValue);
+    if (!Array.isArray(value)) {
+      throw new Error('Parsed value is not an array');
+    }
+    return value;
   } catch (err) {
     debug(
       'Attempting to parse the value "%s" of env var "%s" as JSON failed, interpreting it as CSV. Parsing error: %s',
