@@ -58,7 +58,9 @@ export function overrideArrayValues(
   options: EnvVarNamingOptions = {
     case: 'snake_case',
     propertySeparator: '__',
-    prefix: undefined
+    prefix: undefined,
+    truncateTargetArrays: undefined,
+    extendTargetArrays: undefined
   }
 ): Record<string, JSONType>
 ```
@@ -202,7 +204,9 @@ those defined as pattern or additional properties.
 
 It's not possible to combine or nest setting every or each element of arrays,
 i.e. you can't set a property in every/each element of an array in every/each
-element of another array.
+element of another array. However, you can set properties in each and every
+element of the same array: properties will be applied to each element before
+they are applied to every element.
 
 An array of objects is considered to by homogeneous if its schema satisfies all
 of the following conditions:
@@ -283,7 +287,8 @@ target property.
 Each element in the environment variable value array will be applied to the
 target property in the corresponding element object in the target array. If
 the target and value arrays are of different lengths, changes will only be made
-up to the length of the shorter array.
+up to the length of the shorter array. This behaviour can be changed by setting
+the `truncateTargetArrays` and `extendTargetArrays` to `true`.
 
 For example, given a schema like
 

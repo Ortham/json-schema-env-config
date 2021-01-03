@@ -1,5 +1,5 @@
 export { loadFromEnv } from './src/environment';
-export { overrideArrayValues } from './src/override';
+export { overrideArrayValues, ArrayOverrideOptions } from './src/override';
 export {
   JSONSchema,
   JSONType,

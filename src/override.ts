@@ -23,6 +23,11 @@ import { createParentObjects, readFromEnvVars } from './environment';
 
 const debug = debugConstructor('json-schema-env-config');
 
+export type ArrayOverrideOptions = EnvVarNamingOptions & {
+  truncateTargetArrays?: boolean;
+  extendTargetArrays?: boolean;
+};
+
 function describesObject(schema: JSONSchema | boolean): boolean {
   return typeof schema !== 'boolean' && schema.type === 'object';
 }
@@ -129,13 +134,13 @@ function walkObjectArrayProperties(
 
   walkConfigProperties(
     itemSchema,
-    configPropertyPath.concat(META_PATH_ITEM_EVERY),
+    configPropertyPath.concat(META_PATH_ITEM_EACH),
     visitor
   );
 
   walkConfigProperties(
     itemSchema,
-    configPropertyPath.concat(META_PATH_ITEM_EACH),
+    configPropertyPath.concat(META_PATH_ITEM_EVERY),
     visitor
   );
 }
@@ -232,7 +237,8 @@ function applyToEachElement(
   config: Record<string, JSONType>,
   configPropertyPath: ConfigPropertyPath,
   value: JSONType,
-  eachIndex: number
+  eachIndex: number,
+  options: ArrayOverrideOptions
 ): void {
   const configArray = getArrayToOverride(
     config,
@@ -259,6 +265,23 @@ function applyToEachElement(
       configArray[i],
       value[i]
     );
+  }
+
+  if (options.truncateTargetArrays) {
+    while (configArray.length > value.length) {
+      configArray.pop();
+    }
+  }
+
+  if (options.extendTargetArrays) {
+    for (let i = configArray.length; i < value.length; ++i) {
+      const elementObject = createOverrideElement(
+        configPropertyPath,
+        eachIndex,
+        value[i]
+      );
+      configArray.push(elementObject);
+    }
   }
 }
 
@@ -292,7 +315,7 @@ export function overrideArrayValues(
   config: Record<string, JSONType>,
   env: NodeJS.ProcessEnv,
   schema: JSONSchema,
-  options: EnvVarNamingOptions = DEFAULT_OPTIONS
+  options: ArrayOverrideOptions = DEFAULT_OPTIONS
 ): Record<string, JSONType> {
   // eslint-disable-next-line no-param-reassign
   options = initialiseOptions(options);
@@ -345,7 +368,13 @@ export function overrideArrayValues(
         );
 
         if (value !== undefined) {
-          applyToEachElement(config, configPropertyPath, value, eachIndex);
+          applyToEachElement(
+            config,
+            configPropertyPath,
+            value,
+            eachIndex,
+            options
+          );
         }
       }
 

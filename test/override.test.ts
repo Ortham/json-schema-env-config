@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { cloneDeep } from 'lodash';
-import { JSONType } from '../src/common';
+import { JSONSchema, JSONType } from '../src/common';
 import { overrideArrayValues } from '../src/override';
 
 describe('overrideArrayValues', () => {
@@ -587,6 +587,41 @@ describe('overrideArrayValues', () => {
       });
     });
 
+    it('should truncate the target array if it is longer than the env var value array if configured to do so', () => {
+      const config: any = overrideArrayValues(
+        {
+          array: [{ prop1: 'a', prop2: 0 }, { prop1: 'b' }]
+        },
+        {
+          array__each__prop_2: '1'
+        },
+        {
+          type: 'object',
+          properties: {
+            array: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  prop1: {
+                    type: 'string'
+                  },
+                  prop2: {
+                    type: 'number'
+                  }
+                }
+              }
+            }
+          }
+        },
+        { truncateTargetArrays: true }
+      );
+
+      expect(config).toEqual({
+        array: [{ prop1: 'a', prop2: 1 }]
+      });
+    });
+
     it('should stop at the length of the target array if it is shorter than the env var value array', () => {
       const config: any = overrideArrayValues(
         {
@@ -618,6 +653,155 @@ describe('overrideArrayValues', () => {
 
       expect(config).toEqual({
         array: [{ prop1: 'a', prop2: 1 }]
+      });
+    });
+
+    it('should extend the target array by adding new objects if it is shorter than the env var value array, if configured to do so', () => {
+      const config: any = overrideArrayValues(
+        {
+          array: [{ prop1: 'a', prop2: 0 }]
+        },
+        {
+          array__each__prop_2: '1,2'
+        },
+        {
+          type: 'object',
+          properties: {
+            array: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  prop1: {
+                    type: 'string'
+                  },
+                  prop2: {
+                    type: 'number'
+                  }
+                }
+              }
+            }
+          }
+        },
+        { extendTargetArrays: true }
+      );
+
+      expect(config).toEqual({
+        array: [{ prop1: 'a', prop2: 1 }, { prop2: 2 }]
+      });
+    });
+
+    it('should give a result that depends on the order in which properties are evaluated when each arrays of different lengths are given', () => {
+      const inputConfig: Record<string, JSONType> = {
+        array: [{ prop1: 'a', prop2: 0 }, { prop1: 'b' }]
+      };
+      const schema: JSONSchema = {
+        type: 'object',
+        properties: {
+          array: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                prop1: {
+                  type: 'string'
+                },
+                prop2: {
+                  type: 'number'
+                }
+              }
+            }
+          }
+        }
+      };
+      const options = { truncateTargetArrays: true, extendTargetArrays: true };
+
+      const config1: any = overrideArrayValues(
+        inputConfig,
+        {
+          array__each__prop_1: 'c,d',
+          array__each__prop_2: '1'
+        },
+        schema,
+        options
+      );
+
+      expect(config1).toEqual({
+        array: [{ prop1: 'c', prop2: 1 }]
+      });
+
+      const config2: any = overrideArrayValues(
+        inputConfig,
+        {
+          array__each__prop_1: 'c',
+          array__each__prop_2: '1,2'
+        },
+        schema,
+        options
+      );
+
+      expect(config2).toEqual({
+        array: [{ prop1: 'c', prop2: 1 }, { prop2: 2 }]
+      });
+    });
+
+    it('should override each element before overriding every element', () => {
+      const inputConfig: Record<string, JSONType> = {
+        array: [{ prop1: 'a', prop2: 0 }]
+      };
+      const schema: JSONSchema = {
+        type: 'object',
+        properties: {
+          array: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                prop1: {
+                  type: 'string'
+                },
+                prop2: {
+                  type: 'number'
+                }
+              }
+            }
+          }
+        }
+      };
+      const options = { truncateTargetArrays: true, extendTargetArrays: true };
+
+      const config1: any = overrideArrayValues(
+        inputConfig,
+        {
+          array__every__prop_1: 'c',
+          array__each__prop_2: '1,2'
+        },
+        schema,
+        options
+      );
+
+      expect(config1).toEqual({
+        array: [
+          { prop1: 'c', prop2: 1 },
+          { prop1: 'c', prop2: 2 }
+        ]
+      });
+
+      const config2: any = overrideArrayValues(
+        inputConfig,
+        {
+          array__each__prop_1: 'c,d',
+          array__every__prop_2: '1'
+        },
+        schema,
+        options
+      );
+
+      expect(config2).toEqual({
+        array: [
+          { prop1: 'c', prop2: 1 },
+          { prop1: 'd', prop2: 1 }
+        ]
       });
     });
 
