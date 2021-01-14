@@ -1,6 +1,18 @@
 Changelog
 =========
 
+## 1.1.1 - 2021-01-14
+
+### Fixed
+
+- Parsing env var values with schema type `object` would also accept other JSON
+  types.
+- Parsing numbers would accept a wider range of values than are allowed by
+  the JSON specification. In particular, an empty string would be parsed as `0`,
+  and hexadecimal, octal and binary numbers were also allowed.
+- Parsing booleans would match `true` and `false` case-insensitively. Matching
+  is now case-sensitive to give the documented behaviour, and for consistency.
+
 ## 1.1.0 - 2021-01-03
 
 ### Added
