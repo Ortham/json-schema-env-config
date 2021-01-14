@@ -118,8 +118,18 @@ function parseNumber(
   envVarName: string,
   envVarValue: string
 ): number | undefined {
-  const value = Number(envVarValue);
-  if (Number.isNaN(value)) {
+  try {
+    const value = JSON.parse(envVarValue);
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      debug(
+        'Ignoring env var "%s": the value "%s" is not numeric',
+        envVarName,
+        envVarValue
+      );
+      return undefined;
+    }
+    return value;
+  } catch (err) {
     debug(
       'Ignoring env var "%s": the value "%s" is not numeric',
       envVarName,
@@ -127,7 +137,6 @@ function parseNumber(
     );
     return undefined;
   }
-  return value;
 }
 
 function parseInteger(
