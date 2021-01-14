@@ -31,7 +31,16 @@ function parseObject(
   envVarValue: string
 ): { [member: string]: JSONType } | undefined {
   try {
-    return JSON.parse(envVarValue);
+    const value = JSON.parse(envVarValue);
+    if (typeof value !== 'object' || Array.isArray(value) || value === null) {
+      debug(
+        'Ignoring env var "%s": the value "%s" is not a JSON object.',
+        envVarName,
+        envVarValue
+      );
+      return undefined;
+    }
+    return value;
   } catch (err) {
     debug(
       'Ignoring env var "%s": the value "%s" is not valid JSON. Details: %s',

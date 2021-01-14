@@ -55,6 +55,53 @@ describe('parseEnvVarValue', () => {
     });
   });
 
+  describe('Parsing objects', () => {
+    const SCHEMA: JSONSchema = { type: 'object' };
+
+    it('should return an object if the value is a JSON object', () => {
+      const input = JSON.stringify({ a: 1 });
+      const value = parseEnvVarValue(NAME, input, SCHEMA);
+
+      expect(value).toEqual({ a: 1 });
+    });
+
+    it('should return undefined if the value is invalid JSON', () => {
+      const value = parseEnvVarValue(NAME, '{"test"', SCHEMA);
+
+      expect(value).toBeUndefined();
+    });
+
+    it('should return undefined if the value is a JSON null', () => {
+      const value = parseEnvVarValue(NAME, 'null', SCHEMA);
+
+      expect(value).toBeUndefined();
+    });
+
+    it('should return undefined if the value is a JSON boolean', () => {
+      const value = parseEnvVarValue(NAME, 'true', SCHEMA);
+
+      expect(value).toBeUndefined();
+    });
+
+    it('should return undefined if the value is a JSON array', () => {
+      const value = parseEnvVarValue(NAME, '[]', SCHEMA);
+
+      expect(value).toBeUndefined();
+    });
+
+    it('should return undefined if the value is a JSON number', () => {
+      const value = parseEnvVarValue(NAME, '1', SCHEMA);
+
+      expect(value).toBeUndefined();
+    });
+
+    it('should return undefined if the value is a JSON string', () => {
+      const value = parseEnvVarValue(NAME, '"test"', SCHEMA);
+
+      expect(value).toBeUndefined();
+    });
+  });
+
   describe('Parsing numbers', () => {
     const SCHEMA: JSONSchema = { type: 'number' };
 
