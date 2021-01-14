@@ -270,14 +270,14 @@ describe('loadFromEnv', () => {
       }
     };
 
-    it('should convert case-insensitive env var value true to true for boolean properties', () => {
-      const config: any = loadFromEnv({ bool: 'TrUe' }, schema);
+    it('should convert env var value true to true for boolean properties', () => {
+      const config: any = loadFromEnv({ bool: 'true' }, schema);
 
       expect(config.bool).toBe(true);
     });
 
-    it('should convert case-insensitive env var value false to false for boolean properties', () => {
-      const config: any = loadFromEnv({ bool: 'FaLsE' }, schema);
+    it('should convert env var value false to false for boolean properties', () => {
+      const config: any = loadFromEnv({ bool: 'false' }, schema);
 
       expect(config.bool).toBe(false);
     });

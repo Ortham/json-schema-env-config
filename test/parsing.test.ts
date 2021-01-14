@@ -2,8 +2,60 @@ import { JSONSchema } from '../src/common';
 import { parseEnvVarValue } from '../src/parsing';
 
 describe('parseEnvVarValue', () => {
+  const NAME = 'test';
+
+  describe('Parsing booleans', () => {
+    const SCHEMA: JSONSchema = { type: 'boolean' };
+
+    it('should return true if given a string that is "true"', () => {
+      const value = parseEnvVarValue(NAME, 'true', SCHEMA);
+
+      expect(value).toBe(true);
+    });
+
+    it('should return false if given a string that is "false"', () => {
+      const value = parseEnvVarValue(NAME, 'false', SCHEMA);
+
+      expect(value).toBe(false);
+    });
+
+    it('should return undefined if given a string that is not "true" or "false"', () => {
+      const invalidValues = [
+        '',
+        'TRUE',
+        'True',
+        'truetrue',
+        'FALSE',
+        'False',
+        'falsefalse',
+        '1',
+        '0',
+        'yes',
+        'Yes',
+        'YES',
+        'no',
+        'No',
+        'NO',
+        'y',
+        'Y',
+        'n',
+        'N',
+        'on',
+        'On',
+        'ON',
+        'off',
+        'Off',
+        'OFF'
+      ];
+      for (const invalidString of invalidValues) {
+        const value = parseEnvVarValue(NAME, invalidString, SCHEMA);
+
+        expect(value).toBeUndefined();
+      }
+    });
+  });
+
   describe('Parsing numbers', () => {
-    const NAME = 'test';
     const SCHEMA: JSONSchema = { type: 'number' };
 
     it('should return a number if the string only contains digits', () => {

@@ -16,7 +16,7 @@ function parseNull(envVarName: string, envVarValue: string): null | undefined {
 }
 
 function parseBoolean(value: string): boolean | undefined {
-  switch (value.toLowerCase()) {
+  switch (value) {
     case 'true':
       return true;
     case 'false':
