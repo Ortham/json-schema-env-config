@@ -1,6 +1,16 @@
 Changelog
 =========
 
+## 1.1.2 - 2021-03-10
+
+### Fixed
+
+- Environment variables would be ignored if they should have matched an unnamed
+  property (i.e. one defined by `additionalProperties` or `patternProperties`)
+  that had a schema using `allOf`, `anyOf` or `oneOf`. Now all schemas listed by
+  those in-place applicators will be used when searching for matching
+  environment variables.
+
 ## 1.1.1 - 2021-01-14
 
 ### Fixed
