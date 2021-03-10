@@ -1,6 +1,6 @@
 import { JSONSchema, UnsupportedSchema } from './common';
 
-const IN_PLACE_APPLICATOR_KEYWORDS: ['anyOf', 'oneOf', 'allOf'] = [
+export const IN_PLACE_APPLICATOR_KEYWORDS: ['anyOf', 'oneOf', 'allOf'] = [
   'anyOf',
   'oneOf',
   'allOf'

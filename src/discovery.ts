@@ -1,7 +1,7 @@
 import debugConstructor from 'debug';
 import { EnvVarNamingOptions, JSONSchema, UnsupportedSchema } from './common';
 import { getEnvVarName, transformPropertyName } from './naming';
-import { ConfigPropertyPath } from './walking';
+import { ConfigPropertyPath, IN_PLACE_APPLICATOR_KEYWORDS } from './walking';
 
 const debug = debugConstructor('json-schema-env-config');
 
@@ -16,6 +16,41 @@ function discoverUnnamedProperties(
   parentPath: ConfigPropertyPath,
   options: EnvVarNamingOptions
 ): DiscoveredProperty[] {
+  debug('Discovering unnamed properties');
+  debug('\twith schema %j', propertiesSchema);
+  debug(
+    '\twith candidate env var name suffixes %j',
+    candidateEnvVarNameSuffixes
+  );
+  debug('\twith parent path %j', parentPath);
+
+  for (const keyword of IN_PLACE_APPLICATOR_KEYWORDS) {
+    const schemas = propertiesSchema[keyword];
+    if (schemas) {
+      let discoveredProperties: DiscoveredProperty[] = [];
+      for (const elementSchema of schemas) {
+        if (typeof elementSchema === 'boolean') {
+          throw new UnsupportedSchema(
+            `Boolean "${keyword}" keyword element values are not supported`
+          );
+        }
+
+        const newlyDiscoveredProperties = discoverUnnamedProperties(
+          elementSchema,
+          candidateEnvVarNameSuffixes,
+          parentPath,
+          options
+        );
+
+        discoveredProperties = discoveredProperties.concat(
+          newlyDiscoveredProperties
+        );
+      }
+
+      return discoveredProperties;
+    }
+  }
+
   switch (propertiesSchema.type) {
     case undefined:
       // No type, ignore any candidates.

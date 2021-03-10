@@ -1310,6 +1310,102 @@ describe('loadFromEnv', () => {
 
           expect(config.property.key).toBe(3.14);
         });
+
+        it(`should support additional properties inside an ${keyword} schema`, () => {
+          const config: any = loadFromEnv(
+            {
+              property__key: 'value'
+            },
+            {
+              type: 'object',
+              properties: {
+                property: {
+                  [keyword]: [
+                    {
+                      type: 'object',
+                      additionalProperties: {
+                        type: 'string'
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          );
+
+          expect(config.property.key).toBe('value');
+        });
+
+        it(`should support pattern properties inside an ${keyword} schema`, () => {
+          const config: any = loadFromEnv(
+            {
+              property__key: 'value'
+            },
+            {
+              type: 'object',
+              properties: {
+                property: {
+                  [keyword]: [
+                    {
+                      type: 'object',
+                      patternProperties: {
+                        '.*': {
+                          type: 'string'
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          );
+
+          expect(config.property.key).toBe('value');
+        });
+
+        it(`should support an ${keyword} schema inside additional properties`, () => {
+          const config: any = loadFromEnv(
+            {
+              property__key: 'value'
+            },
+            {
+              type: 'object',
+              properties: {
+                property: {
+                  type: 'object',
+                  additionalProperties: {
+                    [keyword]: [{ type: 'string' }]
+                  }
+                }
+              }
+            }
+          );
+
+          expect(config.property.key).toBe('value');
+        });
+
+        it(`should support an ${keyword} schema inside pattern properties`, () => {
+          const config: any = loadFromEnv(
+            {
+              property__key: 'value'
+            },
+            {
+              type: 'object',
+              properties: {
+                property: {
+                  type: 'object',
+                  patternProperties: {
+                    '.*': {
+                      [keyword]: [{ type: 'string' }]
+                    }
+                  }
+                }
+              }
+            }
+          );
+
+          expect(config.property.key).toBe('value');
+        });
       });
     }
 
