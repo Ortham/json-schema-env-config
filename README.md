@@ -115,13 +115,14 @@ to `camel_case__variable_1`, `#/camelCase/variable1` can be set using the
 While the environment variables without the `__file` suffix have their values
 used directly, the `__file`-suffixed variables must be set to the path to a file.
 The file content is read as a UTF-8 string and leading and trailing whitespace
-is trimmed, and the resulting value is set as the config property's value.
+is trimmed, and the resulting value is set as the config property's value. If
+the file cannot be read or is empty after whitespace is trimmed, the file's
+existence is ignored.
 
-If the file cannot be read or is empty, SG treats this environment variable as
-being undefined. If the suffixed and non-suffixed env vars are both defined, the
-non-suffixed env var overrides the suffixed env var. For example,
-`camel_case__variable_1__file` can be set to the path to a file containing a
-value, but it will be ignored if `camel_case__variable_1` is also set.
+If the suffixed and non-suffixed env vars are both defined, the non-suffixed env
+var overrides the suffixed env var. For example, `camel_case__variable_1__file`
+can be set to the path to a file containing a value, but it will be ignored if
+`camel_case__variable_1` is also set.
 
 ### Unnamed properties
 
